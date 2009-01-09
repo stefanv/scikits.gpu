@@ -27,8 +27,9 @@ ctypes_opengl = {
     }
 
 def memory_type(T):
-    """Convert an OpenGL type, such as GL_BYTE, to the corresponding
-    ctypes data-type, such as c_ubyte.
+    """For a given OpenGL type, such as GL_BYTE, return the corresponding
+    ctypes data-type, in this case c_ubyte.  If type is a ctype, it is simply
+    passed through.
 
     Parameters
     ----------
@@ -39,8 +40,9 @@ def memory_type(T):
     type : ctype
         The ctype corresponding to `T`.
 
+
     """
-    if type(T) == type(type):
+    if isinstance(T, type):
         return T
     elif isinstance(T, int):
         return opengl_ctypes[T]

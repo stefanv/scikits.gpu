@@ -31,8 +31,22 @@ DEALINGS IN THE SOFTWARE.
 
 """
 
+__all__ = ['Shader']
+
 from pyglet.gl import *
 from scikits.gpu.config import GLSLError
+
+def if_bound(f):
+    """Decorator: Execute this function if and only if the shader is bound.
+
+    """
+    def execute_if_bound(self, *args, **kwargs):
+        if not self.bound:
+            raise GLSLError("Shader is not bound.  Cannot execute assignment.")
+
+        f(*args, **kwargs)
+
+    return execute_if_bound
 
 class Shader:
     # vert, frag and geom take arrays of source strings
@@ -42,6 +56,7 @@ class Shader:
         self.handle = glCreateProgram()
         # we are not linked yet
         self.linked = False
+        self.bound = False
 
         # create the vertex shader
         self._createShader(vert, GL_VERTEX_SHADER)
@@ -120,14 +135,16 @@ class Shader:
     def bind(self):
         # bind the program
         glUseProgram(self.handle)
+        self.bound = True
 
     def unbind(self):
         # unbind whatever program is currently bound - not necessarily
         # this program, so this should probably be a class method instead
         glUseProgram(0)
+        self.bound = False
 
     # upload a floating point uniform
-    # this program must be currently bound
+    @if_bound
     def uniformf(self, name, *vals):
         # check there are 1-4 values
         if len(vals) in range(1, 5):
@@ -140,7 +157,7 @@ class Shader:
              }[len(vals)](glGetUniformLocation(self.handle, name), *vals)
 
     # upload an integer uniform
-    # this program must be currently bound
+    @if_bound
     def uniformi(self, name, *vals):
         # check there are 1-4 values
         if len(vals) in range(1, 5):
@@ -155,6 +172,7 @@ class Shader:
     # upload a uniform matrix
     # works with matrices stored as lists,
     # as well as euclid matrices
+    @if_bound
     def uniform_matrixf(self, name, mat):
         # obtian the uniform location
         loc = glGetUniformLocation(self.Handle, name)

@@ -37,25 +37,28 @@ from scikits.gpu.config import GLSLError
 class Shader:
     # vert, frag and geom take arrays of source strings
     # the arrays will be concattenated into one string by OpenGL
-    def __init__(self, vert=[], frag =[], geom=[]):
+    def __init__(self, vert=[], frag=[], geom=[]):
         # create the program handle
         self.handle = glCreateProgram()
         # we are not linked yet
         self.linked = False
 
         # create the vertex shader
-        self.createShader(vert, GL_VERTEX_SHADER)
+        self._createShader(vert, GL_VERTEX_SHADER)
         # create the fragment shader
-        self.createShader(frag, GL_FRAGMENT_SHADER)
+        self._createShader(frag, GL_FRAGMENT_SHADER)
 
         # the geometry shader will be the same, once pyglet supports the
         # extension
         # self.createShader(frag, GL_GEOMETRY_SHADER_EXT)
 
         # attempt to link the program
-        self.link()
+        self._link()
 
-    def createShader(self, strings, type):
+    def _createShader(self, strings, type):
+        if isinstance(strings, basestring):
+            strings = [strings]
+
         count = len(strings)
         # if we have no source code, ignore this shader
         if count < 1:
@@ -92,7 +95,7 @@ class Shader:
             # all is well, so attach the shader to the program
             glAttachShader(self.handle, shader);
 
-    def link(self):
+    def _link(self):
         # link the program
         glLinkProgram(self.handle)
 

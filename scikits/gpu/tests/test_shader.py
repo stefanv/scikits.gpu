@@ -39,7 +39,8 @@ def test_parameters():
     s = Shader(vert="""
 uniform float float_in;
 uniform int int_in;
-uniform vec4 matrix_in;
+uniform vec4 vec_in;
+uniform mat4 mat_in;
 
 varying float x;
 
@@ -49,14 +50,17 @@ void main(void)
     // to the vertex shader
     x = float_in;
     x = float(int_in) * 0.5;
-    x = float(int_in) + matrix_in.r;
+    x = float(int_in) + vec_in.r;
 
-  gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
 }
     """)
 
     s.bind()
     s.uniformf('float_in', 1.3)
+    s.uniformi('int_in', 1)
+    s.uniformf('vec_in', 1.0, 2.0, 3.0, 4.0)
+    s.uniform_matrixf('mat_in', range(16))
     s.unbind()
 
 def test_if_bound_decorator():

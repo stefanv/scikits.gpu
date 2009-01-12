@@ -33,8 +33,9 @@ DEALINGS IN THE SOFTWARE.
 
 __all__ = ['Shader']
 
-from pyglet.gl import *
 from scikits.gpu.config import GLSLError
+
+from pyglet.gl import *
 
 def if_bound(f):
     """Decorator: Execute this function if and only if the shader is bound.
@@ -44,7 +45,10 @@ def if_bound(f):
         if not self.bound:
             raise GLSLError("Shader is not bound.  Cannot execute assignment.")
 
-        f(*args, **kwargs)
+        f(self, *args, **kwargs)
+
+    for attr in ["func_name", "__name__", "__dict__", "__doc__"]:
+        setattr(execute_if_bound, attr, getattr(f, attr))
 
     return execute_if_bound
 
@@ -175,6 +179,6 @@ class Shader:
     @if_bound
     def uniform_matrixf(self, name, mat):
         # obtian the uniform location
-        loc = glGetUniformLocation(self.Handle, name)
+        loc = glGetUniformLocation(self.handle, name)
         # uplaod the 4x4 floating point matrix
         glUniformMatrix4fv(loc, 1, False, (c_float * 16)(*mat))

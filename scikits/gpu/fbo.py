@@ -84,8 +84,10 @@ class Framebuffer(object):
         """Delete the framebuffer from the graphics card's memory.
 
         """
-        gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, 0)
-        gl.glDeleteFramebuffersEXT(1, self.fbo_names)
+        self.unbind()
+        if self.fbo_names:
+            gl.glDeleteFramebuffersEXT(1, self.fbo_names)
+            self.fbo_names = None
 
     def __del__(self):
         self.delete()

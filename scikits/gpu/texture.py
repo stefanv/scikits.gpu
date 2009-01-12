@@ -41,6 +41,17 @@ from pyglet.window import *
 
 import math
 
+_opengl_ctypes = {
+    gl.GL_BYTE: gl.GLbyte,
+    gl.GL_UNSIGNED_BYTE: gl.GLubyte,
+    gl.GL_SHORT: gl.GLshort,
+    gl.GL_UNSIGNED_SHORT: gl.GLushort,
+    gl.GL_INT: gl.GLint,
+    gl.GL_UNSIGNED_INT: gl.GLuint,
+    gl.GL_FLOAT: gl.GLfloat,
+    gl.GL_DOUBLE: gl.GLdouble,
+    }
+
 def _nearest_pow2(x):
     return 2 ** int(round(math.log(x, 2)))
 

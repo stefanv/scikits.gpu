@@ -16,6 +16,7 @@ from scikits.gpu.texture import Texture
 
 class Framebuffer(object):
     require_extension('GL_EXT_framebuffer_object')
+    fbo_names = None
 
     def __init__(self, width, height, bands=3):
         """Framebuffer Object (FBO) for off-screen rendering.
@@ -50,8 +51,8 @@ class Framebuffer(object):
         gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, fbo)
 
         # allocate a texture and add to the frame buffer
-        tex = Texture.create_for_size(gl.GL_TEXTURE_2D, width, height,
-                                            colour_bands[bands])
+        tex = Texture.create(width, height,
+                             format=colour_bands[bands])
 
         gl.glBindTexture(gl.GL_TEXTURE_2D, tex.id)
         gl.glFramebufferTexture2DEXT(gl.GL_FRAMEBUFFER_EXT,

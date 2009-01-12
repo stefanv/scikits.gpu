@@ -43,8 +43,7 @@ class Framebuffer(object):
         n = 1
 
         fbo_names = (n * gl.GLuint)()
-        gl.glGenFramebuffersEXT(1, ctypes.cast(ctypes.byref(fbo_names),
-                                               ctypes.POINTER(gl.GLuint)))
+        gl.glGenFramebuffersEXT(1, fbo_names)
 
         # We only work with one from here on
         fbo = fbo_names[0]
@@ -65,11 +64,15 @@ class Framebuffer(object):
         if not (status == gl.GL_FRAMEBUFFER_COMPLETE_EXT):
             raise RuntimeError("Could not set up framebuffer.")
 
+        self.tex = tex
+        self.fbo = fbo
+        self.fbo_names = fbo_names
+
     def bind(self):
         """Set the FBO as the active rendering buffer.
 
         """
-        gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, fbo)
+        gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, self.fbo)
 
     def unbind(self):
         """Set the window as the active rendering buffer.
@@ -82,4 +85,7 @@ class Framebuffer(object):
 
         """
         gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, 0)
-        gl.glDeleteFramebuffersEXT(1, ctypes.byref(fbo))
+        gl.glDeleteFramebuffersEXT(1, self.fbo_names)
+
+    def __del__(self):
+        self.delete()

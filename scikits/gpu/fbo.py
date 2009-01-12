@@ -12,6 +12,7 @@ from pyglet import gl, image
 import ctypes
 
 from scikits.gpu.config import require_extension
+from scikits.gpu.texture import Texture
 
 class Framebuffer(object):
     require_extension('GL_EXT_framebuffer_object')
@@ -36,19 +37,29 @@ class Framebuffer(object):
                         3: gl.GL_RGB,
                         4: gl.GL_RGBA}
 
-        # Create a framebuffer object
-        fbo = gl.GLuint()
-        gl.glGenFramebuffersEXT(1, ctypes.byref(fbo))
+        ## Create a framebuffer object
+
+        # Number of framebuffer objects to allocate
+        n = 1
+
+        fbo_names = (n * gl.GLuint)()
+        gl.glGenFramebuffersEXT(1, ctypes.cast(ctypes.byref(fbo_names),
+                                               ctypes.POINTER(gl.GLuint)))
+
+        # We only work with one from here on
+        fbo = fbo_names[0]
         gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, fbo)
 
         # allocate a texture and add to the frame buffer
-        tex = image.Texture.create_for_size(gl.GL_TEXTURE_2D, width, height,
+        tex = Texture.create_for_size(gl.GL_TEXTURE_2D, width, height,
                                             colour_bands[bands])
 
         gl.glBindTexture(gl.GL_TEXTURE_2D, tex.id)
         gl.glFramebufferTexture2DEXT(gl.GL_FRAMEBUFFER_EXT,
                                      gl.GL_COLOR_ATTACHMENT0_EXT,
                                      gl.GL_TEXTURE_2D, tex.id, 0)
+        if (gl.glGetError() != gl.GL_NO_ERROR):
+            raise RuntimeError("Could not create framebuffer texture.")
 
         status = gl.glCheckFramebufferStatusEXT(gl.GL_FRAMEBUFFER_EXT)
         if not (status == gl.GL_FRAMEBUFFER_COMPLETE_EXT):

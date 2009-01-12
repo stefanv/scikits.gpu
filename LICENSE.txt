@@ -1,4 +1,4 @@
-All files in this package are licensed under non-restrictive free
+All files in this package are licensed under permissive free
 software licenses (BSD, MIT, etc.).
 
 In addition to any copyright statements specified in individual files,

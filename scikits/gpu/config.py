@@ -10,6 +10,9 @@ class HardwareSupportError(Exception):
     def __str__(self):
         return self.message
 
+class GLSLError(Exception):
+    pass
+
 def require_extension(ext):
     """Ensure that the given graphics extension is supported.
 

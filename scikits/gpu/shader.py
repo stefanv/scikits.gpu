@@ -32,6 +32,7 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from pyglet.gl import *
+from scikits.gpu.config import GLSLError
 
 class Shader:
     # vert, frag and geom take arrays of source strings
@@ -86,7 +87,7 @@ class Shader:
             # retrieve the log text
             glGetShaderInfoLog(shader, temp, None, buffer)
             # print the log to the console
-            print buffer.value
+            raise GLSLError(buffer.value)
         else:
             # all is well, so attach the shader to the program
             glAttachShader(self.handle, shader);

@@ -65,15 +65,18 @@ class Framebuffer(object):
         if not (status == gl.GL_FRAMEBUFFER_COMPLETE_EXT):
             raise RuntimeError("Could not set up framebuffer.")
 
-        self.tex = tex
-        self.fbo = fbo
-        self.fbo_names = fbo_names
+        self.texure = tex
+        self.framebuffer = fbo
+        self.framebuffer_obj_names = fbo_names
 
     def bind(self):
         """Set the FBO as the active rendering buffer.
 
         """
-        gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, self.fbo)
+        if self.framebuffer_obj_names:
+            gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, self.framebuffer)
+        else:
+            raise RuntimeError("Cannot bind to deleted framebuffer.")
 
     def unbind(self):
         """Set the window as the active rendering buffer.
@@ -86,9 +89,9 @@ class Framebuffer(object):
 
         """
         self.unbind()
-        if self.fbo_names:
-            gl.glDeleteFramebuffersEXT(1, self.fbo_names)
-            self.fbo_names = None
+        if self.framebuffer_obj_names:
+            gl.glDeleteFramebuffersEXT(1, self.framebuffer_obj_names)
+            self.framebuffer_obj_names = None
 
     def __del__(self):
         self.delete()

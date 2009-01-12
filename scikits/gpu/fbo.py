@@ -18,7 +18,7 @@ class Framebuffer(object):
     require_extension('GL_EXT_framebuffer_object')
     fbo_names = None
 
-    def __init__(self, width, height, bands=3):
+    def __init__(self, width, height, bands=3, dtype=gl.GL_UNSIGNED_BYTE):
         """Framebuffer Object (FBO) for off-screen rendering.
 
         Parameters
@@ -28,9 +28,7 @@ class Framebuffer(object):
             of OpenGL, dimensions must be a power of two.
         bands : int
             Number of colour bands.
-        dtype : numpy data-type, e.g. float, int, or
-                opengl data-type, e.g. GL_FLOAT, GL_UNSIGNED_BYTE, or
-                ctypes data-type, e.g. float, ubyte
+        dtype : opengl data-type, e.g. GL_FLOAT, GL_UNSIGNED_BYTE
 
         """
         colour_bands = {1: gl.GL_LUMINANCE,
@@ -52,7 +50,9 @@ class Framebuffer(object):
 
         # allocate a texture and add to the frame buffer
         tex = Texture.create(width, height,
-                             format=colour_bands[bands])
+                             format=colour_bands[bands],
+                             dtype=dtype
+                             )
 
         gl.glBindTexture(gl.GL_TEXTURE_2D, tex.id)
         gl.glFramebufferTexture2DEXT(gl.GL_FRAMEBUFFER_EXT,

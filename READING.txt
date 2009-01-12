@@ -1,0 +1,3 @@
+http://oss.sgi.com/projects/ogl-sample/registry/EXT/framebuffer_object.txt
+
+http://developer.apple.com/documentation/GraphicsImaging/Conceptual/OpenGL-MacProgGuide/opengl_offscreen/chapter_5_section_5.html

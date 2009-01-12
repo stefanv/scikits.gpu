@@ -17,3 +17,8 @@ class TestFramebuffer(object):
                       gl.GL_FLOAT]:
             for bands in [1, 2, 3, 4]:
                 yield self.create, 16, 16, bands, dtype
+
+    def test_bind_deleted(self):
+        fbo = Framebuffer(32, 32)
+        fbo.delete()
+        assert_raises(RuntimeError, fbo.bind)

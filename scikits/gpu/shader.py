@@ -181,4 +181,5 @@ class Shader:
         # obtian the uniform location
         loc = glGetUniformLocation(self.handle, name)
         # uplaod the 4x4 floating point matrix
-        glUniformMatrix4fv(loc, 1, False, (c_float * 16)(*mat))
+        # Matrices are entered row-wise, not column-wise as in standard OpenGL
+        glUniformMatrix4fv(loc, 1, True, (c_float * 16)(*mat))

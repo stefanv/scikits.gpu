@@ -1,9 +1,10 @@
-All files in this package are licensed under the MIT, BSD or modified
-BSD license.
+All files in this package are licensed under non-restrictive free
+software licenses (BSD, MIT, etc.).
 
-Unless otherwise specified, the following license holds:
+In addition to any copyright statements specified in individual files,
+the following applies:
 
-Copyright (c) 2009, StÃ©fan van der Walt <stefan@sun.ac.za>
+Copyright (c) 2009, Stéfan van der Walt <stefan@sun.ac.za>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

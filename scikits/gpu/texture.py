@@ -39,18 +39,9 @@ from pyglet.gl import *
 # Need this so that current_context is exposed
 from pyglet.window import *
 
-import math
+from scikits.gpu.ntypes import memory_type
 
-_opengl_ctypes = {
-    gl.GL_BYTE: gl.GLbyte,
-    gl.GL_UNSIGNED_BYTE: gl.GLubyte,
-    gl.GL_SHORT: gl.GLshort,
-    gl.GL_UNSIGNED_SHORT: gl.GLushort,
-    gl.GL_INT: gl.GLint,
-    gl.GL_UNSIGNED_INT: gl.GLuint,
-    gl.GL_FLOAT: gl.GLfloat,
-    gl.GL_DOUBLE: gl.GLdouble,
-    }
+import math
 
 def _nearest_pow2(x):
     return 2 ** int(round(math.log(x, 2)))
@@ -189,7 +180,7 @@ class Texture(AbstractImage):
                         GL_LUMINANCE: 1,
                         GL_LUMINANCE_ALPHA: 2}
 
-        blank = (_opengl_ctypes[dtype] * \
+        blank = (memory_type(dtype) * \
                  (texture_width * texture_height * colour_bands[format]))()
         glTexImage2D(target, 0,
                      internalformat,

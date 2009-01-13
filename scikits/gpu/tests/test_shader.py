@@ -4,7 +4,7 @@ from scikits.gpu.config import GLSLError
 from nose.tools import *
 
 def test_creation():
-    s = Shader()
+    s = Shader("void main(void) { gl_Position = vec4(1,1,1,1);}")
     s.bind()
     s.unbind()
 

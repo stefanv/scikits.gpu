@@ -8,6 +8,8 @@ and is released under the MIT license.  See LICENSE.txt for more detail.
 
 """
 
+__all__ = ['Framebuffer']
+
 from pyglet import gl, image
 import ctypes
 

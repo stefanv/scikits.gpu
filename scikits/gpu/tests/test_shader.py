@@ -3,13 +3,23 @@ from scikits.gpu.config import GLSLError
 
 from nose.tools import *
 
-def test_creation():
-    s = Shader("void main(void) { gl_Position = vec4(1,1,1,1);}")
-    s.bind()
-    s.unbind()
+def test_shader_creation():
+    s = Shader("void main(void) { gl_Position = vec4(1,1,1,1); }")
+
+def test_program_creation():
+    s = Shader("void main(void) { gl_Position = vec4(1,1,1,1); }")
+    p = Program(s)
+    p.bind()
+    p.unbind()
+
+def test_vertex_shader():
+    s = VertexShader("void main(void) { gl_Position = vec4(1,1,1,1); }");
+
+def test_fragment_shader():
+    s = FragmentShader("void main(void) { gl_FragColor = vec4(1,1,1,1); }");
 
 def test_program():
-    s = Shader(vert="""
+    v = VertexShader("""
 varying float x, y;
 
 void main(void)
@@ -19,8 +29,9 @@ void main(void)
 
   gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
 }
-""",
-               frag="""
+""")
+
+    f = FragmentShader("""
 varying float xpos;
 
 void main(void)
@@ -32,11 +43,12 @@ void main(void)
     }
     gl_FragColor = vec4(i, i, sin(i*2.0), 1.0);
 }
+""")
 
-               """)
+    p = Program([v, f])
 
 def test_parameters():
-    s = Shader(vert="""
+    s = VertexShader("""
 uniform float float_in;
 uniform int int_in;
 uniform vec4 vec_in;
@@ -54,15 +66,18 @@ void main(void)
 
     gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
 }
-    """)
+""")
 
-    s.bind()
-    s.uniformf('float_in', 1.3)
-    s.uniformi('int_in', 1)
-    s.uniformf('vec_in', 1.0, 2.0, 3.0, 4.0)
-    s.uniform_matrixf('mat_in', range(16))
-    s.unbind()
+    p = Program(s)
+    p.bind()
+
+    p.uniformf('float_in', 1.3)
+    p.uniformi('int_in', 1)
+    p.uniformf('vec_in', 1.0, 2.0, 3.0, 4.0)
+    p.uniform_matrixf('mat_in', range(16))
+    p.unbind()
 
 def test_if_bound_decorator():
-    s = Shader()
-    assert_raises(GLSLError, s.uniformf, 'float_in', 1.3)
+    s = Shader("void main(void) { gl_Position = vec4(1,1,1,1);}")
+    p = Program(s)
+    assert_raises(GLSLError, p.uniformf, 'float_in', 1.3)

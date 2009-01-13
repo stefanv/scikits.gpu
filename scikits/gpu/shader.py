@@ -31,48 +31,31 @@ DEALINGS IN THE SOFTWARE.
 
 """
 
-__all__ = ['Shader']
+__all__ = ['Program', 'VertexShader', 'FragmentShader', 'Shader']
 
 from scikits.gpu.config import GLSLError
 
 from pyglet.gl import *
 
-def if_bound(f):
-    """Decorator: Execute this function if and only if the shader is bound.
-
-    """
-    def execute_if_bound(self, *args, **kwargs):
-        if not self.bound:
-            raise GLSLError("Shader is not bound.  Cannot execute assignment.")
-
-        f(self, *args, **kwargs)
-
-    for attr in ["func_name", "__name__", "__dict__", "__doc__"]:
-        setattr(execute_if_bound, attr, getattr(f, attr))
-
-    return execute_if_bound
-
 class Shader:
-    # vert, frag and geom take arrays of source strings
-    # the arrays will be concattenated into one string by OpenGL
-    def __init__(self, vert=[], frag=[], geom=[]):
-        # create the program handle
-        self.handle = glCreateProgram()
-        # we are not linked yet
-        self.linked = False
-        self.bound = False
+    def __init__(self, source="", type='vertex'):
+        """
+        Vertex, Fragment, or Geometry shader.
+
+        Parameters
+        ----------
+        source : string or list
+            String or list of strings.  The GLSL source code for the shader.
+        type : {'vertex', 'fragment', 'geometry'}
+            Type of shader.
+
+        """
+        shader_type = {'vertex': GL_VERTEX_SHADER,
+                       'fragment': GL_FRAGMENT_SHADER,}
+##                       'geometry': GL_GEOMETRY_SHADER}
 
         # create the vertex shader
-        self._createShader(vert, GL_VERTEX_SHADER)
-        # create the fragment shader
-        self._createShader(frag, GL_FRAGMENT_SHADER)
-
-        # the geometry shader will be the same, once pyglet supports the
-        # extension
-        # self.createShader(frag, GL_GEOMETRY_SHADER_EXT)
-
-        # attempt to link the program
-        self._link()
+        self._createShader(source, shader_type[type])
 
     def _createShader(self, strings, type):
         if isinstance(strings, basestring):
@@ -81,7 +64,7 @@ class Shader:
         count = len(strings)
         # if we have no source code, ignore this shader
         if count < 1:
-            return
+            raise GLSLError("No GLSL source provided.")
 
         # create the shader handle
         shader = glCreateShader(type)
@@ -90,8 +73,9 @@ class Shader:
         # and upload them.  This is deep, dark, dangerous black magick -
         # don't try stuff like this at home!
         src = (c_char_p * count)(*strings)
-        glShaderSource(shader, count, cast(pointer(src),
-                       POINTER(POINTER(c_char))), None)
+        glShaderSource(shader, count,
+                       cast(pointer(src), POINTER(POINTER(c_char))),
+                       None)
 
         # compile the shader
         glCompileShader(shader)
@@ -110,11 +94,76 @@ class Shader:
             glGetShaderInfoLog(shader, temp, None, buffer)
             # print the log to the console
             raise GLSLError(buffer.value)
-        else:
-            # all is well, so attach the shader to the program
-            glAttachShader(self.handle, shader);
+
+        self.handle = shader
+
+class VertexShader(Shader):
+    def __init__(self, source):
+        Shader.__init__(self, source, type='vertex')
+
+class FragmentShader(Shader):
+    def __init__(self, source):
+        Shader.__init__(self, source, type='fragment')
+
+## Not supported yet
+
+## class GeometryShader(Shader):
+##     def __init__(self, source):
+##         Shader.__init__(self, source, type='geometry')
+
+
+def if_bound(f):
+    """Decorator: Execute this function if and only if the shader is bound.
+
+    """
+    def execute_if_bound(self, *args, **kwargs):
+        if not self.bound:
+            raise GLSLError("Shader is not bound.  Cannot execute assignment.")
+
+        f(self, *args, **kwargs)
+
+    for attr in ["func_name", "__name__", "__dict__", "__doc__"]:
+        setattr(execute_if_bound, attr, getattr(f, attr))
+
+    return execute_if_bound
+
+class Program(list):
+    """A program contains one or more Shader.
+
+    """
+    def __init__(self, shaders):
+        try:
+            list.__init__(self, shaders)
+        except TypeError:
+            # In case only one shader was provided
+            list.__init__(self, [shaders])
+
+        self.handle = glCreateProgram()
+
+        print self
+
+        # source is not linked yet
+        self.linked = False
+
+        # not bound yet (i.e. not in rendering pipeline)
+        self.bound = False
+
+        self._link()
+
+    def append(self, shader):
+        """Append a Shader to the Program.
+
+        """
+        self.linked = False
+        list.append(self, shader)
+
+        if self.bound:
+            self.bind()
 
     def _link(self):
+        for shader in self:
+            glAttachShader(self.handle, shader.handle);
+
         # link the program
         glLinkProgram(self.handle)
 
@@ -137,13 +186,20 @@ class Shader:
             self.linked = True
 
     def bind(self):
+        """Bind the program to the rendering pipeline.
+
+        """
+        if not self.linked:
+            self._link()
+
         # bind the program
         glUseProgram(self.handle)
         self.bound = True
 
     def unbind(self):
-        # unbind whatever program is currently bound - not necessarily
-        # this program, so this should probably be a class method instead
+        """Unbind all programs in use.
+
+        """
         glUseProgram(0)
         self.bound = False
 
@@ -183,3 +239,22 @@ class Shader:
         # uplaod the 4x4 floating point matrix
         # Matrices are entered row-wise, not column-wise as in standard OpenGL
         glUniformMatrix4fv(loc, 1, True, (c_float * 16)(*mat))
+
+
+    def insert(self, item):
+        raise NotImplementedError
+
+    def extend(self, item):
+        raise NotImplementedError
+
+    def pop(self, item):
+        raise NotImplementedError
+
+    def remove(self, item):
+        raise NotImplementedError
+
+    def reverse(self, item):
+        raise NotImplementedError
+
+    def sort(self, item):
+        raise NotImplementedError

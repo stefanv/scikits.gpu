@@ -32,6 +32,8 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
 
+__all__ = ['Texture']
+
 from pyglet.image import AbstractImage
 from pyglet import gl
 from pyglet.gl import *

@@ -31,7 +31,8 @@ DEALINGS IN THE SOFTWARE.
 
 """
 
-__all__ = ['Program', 'VertexShader', 'FragmentShader', 'Shader']
+__all__ = ['Program', 'VertexShader', 'FragmentShader', 'Shader',
+           'default_vertex_shader']
 
 from scikits.gpu.config import GLSLError
 
@@ -140,8 +141,6 @@ class Program(list):
 
         self.handle = glCreateProgram()
 
-        print self
-
         # source is not linked yet
         self.linked = False
 
@@ -180,7 +179,7 @@ class Program(list):
             # retrieve the log text
             glGetProgramInfoLog(self.handle, temp, None, buffer)
             # print the log to the console
-            print buffer.value
+            raise GLSLError(buffer.value)
         else:
             # all is well, so we are linked
             self.linked = True
@@ -258,3 +257,9 @@ class Program(list):
 
     def sort(self, item):
         raise NotImplementedError
+
+def default_vertex_shader():
+    """Generate a pass-through VertexShader.
+
+    """
+    return VertexShader("void main(void) { gl_Position = ftransform(); }")

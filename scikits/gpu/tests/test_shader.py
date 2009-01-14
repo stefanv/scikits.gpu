@@ -81,3 +81,11 @@ def test_if_bound_decorator():
     s = Shader("void main(void) { gl_Position = vec4(1,1,1,1);}")
     p = Program(s)
     assert_raises(GLSLError, p.uniformf, 'float_in', 1.3)
+
+def test_default_vertex_shader():
+    s = default_vertex_shader()
+    p = Program(s)
+
+def test_program_failure():
+    assert_raises(GLSLError, Program, [default_vertex_shader(),
+                                       default_vertex_shader()])

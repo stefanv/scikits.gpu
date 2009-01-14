@@ -204,7 +204,16 @@ class Program(list):
 
     # upload a floating point uniform
     @if_bound
-    def uniformf(self, name, *vals):
+    def uniformf(self, name, vals):
+        try:
+            vals = list(vals)
+        except TypeError:
+            vals = [vals]
+
+        if not isinstance(vals[0], float):
+            raise ValueError("Uniformf can only be used to set floating "
+                             "point values.")
+
         # check there are 1-4 values
         if len(vals) in range(1, 5):
             # select the correct function
@@ -224,8 +233,17 @@ class Program(list):
 
     # upload an integer uniform
     @if_bound
-    def uniformi(self, name, *vals):
+    def uniformi(self, name, vals):
         # check there are 1-4 values
+        try:
+            vals = list(vals)
+        except TypeError:
+            vals = [vals]
+
+        if not isinstance(vals[0], int):
+            raise ValueError("Uniformf can only be used to set integer "
+                             "values.")
+
         if len(vals) in range(1, 5):
             # select the correct function
             set_func = {1 : glUniform1i,

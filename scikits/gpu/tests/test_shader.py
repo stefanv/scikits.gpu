@@ -73,7 +73,7 @@ void main(void)
 
     p.uniformf('float_in', 1.3)
     p.uniformi('int_in', 1)
-    p.uniformf('vec_in', 1.0, 2.0, 3.0, 4.0)
+    p.uniformf('vec_in', [1.0, 2.0, 3.0, 4.0])
     p.uniform_matrixf('mat_in', range(16))
     p.unbind()
 
@@ -89,3 +89,11 @@ def test_default_vertex_shader():
 def test_program_failure():
     assert_raises(GLSLError, Program, [default_vertex_shader(),
                                        default_vertex_shader()])
+
+def test_set_uniform_invalid_type():
+    s = default_vertex_shader()
+    p = Program(s)
+    p.bind()
+    assert_raises(ValueError, p.uniformf, 'x', 1)
+    assert_raises(ValueError, p.uniformi, 'x', 1.0)
+    p.unbind()

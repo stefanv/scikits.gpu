@@ -208,12 +208,19 @@ class Program(list):
         # check there are 1-4 values
         if len(vals) in range(1, 5):
             # select the correct function
-            {1 : glUniform1f,
-             2 : glUniform2f,
-             3 : glUniform3f,
-             4 : glUniform4f
-             # retrieve the uniform location, and set
-             }[len(vals)](glGetUniformLocation(self.handle, name), *vals)
+            set_func = {1 : glUniform1f,
+                        2 : glUniform2f,
+                        3 : glUniform3f,
+                        4 : glUniform4f
+                        }[len(vals)]
+            try:
+                set_func(glGetUniformLocation(self.handle, name), *vals)
+            except GLException:
+                raise ValueError("Could not set float value.  Please "
+                                 "ensure that 'uniformf' is only used "
+                                 "to set float values.")
+        else:
+            raise ValueError("Can only upload 1 to 4 floats.")
 
     # upload an integer uniform
     @if_bound
@@ -221,12 +228,20 @@ class Program(list):
         # check there are 1-4 values
         if len(vals) in range(1, 5):
             # select the correct function
-            {1 : glUniform1i,
-             2 : glUniform2i,
-             3 : glUniform3i,
-             4 : glUniform4i
-             # retrieve the uniform location, and set
-             }[len(vals)](glGetUniformLocation(self.handle, name), *vals)
+            set_func = {1 : glUniform1i,
+                        2 : glUniform2i,
+                        3 : glUniform3i,
+                        4 : glUniform4i
+                        }[len(vals)]
+
+            try:
+                set_func(glGetUniformLocation(self.handle, name), *vals)
+            except GLException:
+                raise ValueError("Could not set integer value.  Please "
+                                 "ensure that 'uniformi' is only used "
+                                 "to set integer values.")
+        else:
+            raise ValueError("Can only upload 1 to 4 ints.")
 
     # upload a uniform matrix
     # works with matrices stored as lists,

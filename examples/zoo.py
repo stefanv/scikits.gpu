@@ -1,5 +1,44 @@
 from scikits.gpu.api import *
 
+def whitewash(level=1.0):
+    """Fill the screen with the specified shade of grey.
+
+    """
+    return default_vertex_shader(), \
+           FragmentShader("""
+           void main(void)
+           { gl_FragColor = vec4(%(level)s, %(level)s, %(level)s, 1.0); }""" % \
+                          {'level': level})
+
+def checker():
+    """Fill the screen with checkered blocks.
+
+    """
+    v = VertexShader("""
+    varying vec2 pos;
+
+    void main(void) {
+        pos.xy = gl_Vertex.xy;
+        gl_Position = ftransform();
+    }""")
+
+    f = FragmentShader("""
+    varying vec2 pos;
+
+    void main(void) {
+        if (fract(pos.x * 5) > 0.5)
+            pos.y += 0.5;
+
+        if (fract(pos.y * 5) > 0.5) {
+            gl_FragColor = vec4(0, 0, 0, 1);
+        } else {
+            gl_FragColor = vec4(1, 1, 1, 1);
+        }
+    }
+    """)
+
+    return v, f
+
 def mandelbrot():
     """Return shaders for generating Mandelbrot fractals.
 
@@ -33,7 +72,8 @@ def mandelbrot():
     f = FragmentShader("""
     varying vec2 pos;
 
-    void main() {
+    void main(void) {
+        int j;
         float k;
         float r = 0.0, i = 0.0;
         float a, b;

@@ -42,11 +42,9 @@ from pyglet.gl import *
 from pyglet.window import *
 
 from scikits.gpu.ntypes import memory_type
+from scikits.gpu.config import texture_target
 
 import math
-
-def _nearest_pow2(x):
-    return 2 ** int(round(math.log(x, 2)))
 
 class Texture(AbstractImage):
     '''An image loaded into video memory that can be efficiently drawn
@@ -103,14 +101,8 @@ class Texture(AbstractImage):
 
     @classmethod
     def create(cls, width, height,
-               format=GL_RGBA, dtype=GL_UNSIGNED_BYTE, internalformat=GL_RGBA,
-               rectangle=False, force_rectangle=False):
+               format=GL_RGBA, dtype=GL_UNSIGNED_BYTE, internalformat=GL_RGBA):
         '''Create an empty Texture.
-
-        If `rectangle` is ``False`` or the appropriate driver extensions are
-        not available, a larger texture than requested will be created, and
-        a `TextureRegion` corresponding to the requested size will be
-        returned.
 
         :Parameters:
             `width` : int
@@ -143,28 +135,7 @@ class Texture(AbstractImage):
 
         :since: pyglet 1.1
         '''
-        target = GL_TEXTURE_2D
-        if rectangle or force_rectangle:
-            if not force_rectangle and _is_pow2(width) and _is_pow2(height):
-                rectangle = False
-            elif gl_info.have_extension('GL_ARB_texture_rectangle'):
-                target = GL_TEXTURE_RECTANGLE_ARB
-                rectangle = True
-            elif gl_info.have_extension('GL_NV_texture_rectangle'):
-                target = GL_TEXTURE_RECTANGLE_NV
-                rectangle = True
-            else:
-                rectangle = False
-
-        if force_rectangle and not rectangle:
-            raise ImageException('Texture rectangle extensions not available')
-
-        if rectangle:
-            texture_width = width
-            texture_height = height
-        else:
-            texture_width = _nearest_pow2(width)
-            texture_height = _nearest_pow2(height)
+        target = texture_target(height, width)
 
         id = GLuint()
         glGenTextures(1, byref(id))
@@ -183,16 +154,16 @@ class Texture(AbstractImage):
                         GL_LUMINANCE_ALPHA: 2}
 
         blank = (memory_type(dtype) * \
-                 (texture_width * texture_height * colour_bands[format]))()
+                 (width * height * colour_bands[format]))()
         glTexImage2D(target, 0,
                      internalformat,
-                     texture_width, texture_height,
+                     width, height,
                      0,
                      format, dtype,
                      blank)
 
-        texture = cls(texture_width, texture_height, target, id.value)
-        if rectangle:
+        texture = cls(width, height, target, id.value)
+        if height != width:
             texture._is_rectangle = True
             texture.tex_coords = (0., 0., 0.,
                                   width, 0., 0.,
@@ -200,11 +171,7 @@ class Texture(AbstractImage):
                                   0., height, 0.)
 
         glFlush()
-
-        if texture_width == width and texture_height == height:
-            return texture
-
-        return texture.get_region(0, 0, width, height)
+        return texture
 
     @classmethod
     def create_for_size(cls, target, min_width, min_height,

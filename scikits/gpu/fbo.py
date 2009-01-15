@@ -23,6 +23,12 @@ class Framebuffer(object):
     def __init__(self, width, height, bands=3, dtype=gl.GL_UNSIGNED_BYTE):
         """Framebuffer Object (FBO) for off-screen rendering.
 
+        A framebuffer object contains one or more framebuffer-attachable images.
+        These can be either renderbuffers or texture images.
+
+        For now the framebuffer object handles only one image, a
+        renderbuffer.
+
         Parameters
         ----------
         width, height : int
@@ -56,10 +62,10 @@ class Framebuffer(object):
                              dtype=dtype
                              )
 
-        gl.glBindTexture(gl.GL_TEXTURE_2D, tex.id)
+        gl.glBindTexture(tex.target, tex.id)
         gl.glFramebufferTexture2DEXT(gl.GL_FRAMEBUFFER_EXT,
                                      gl.GL_COLOR_ATTACHMENT0_EXT,
-                                     gl.GL_TEXTURE_2D, tex.id, 0)
+                                     tex.target, tex.id, 0)
         if (gl.glGetError() != gl.GL_NO_ERROR):
             raise RuntimeError("Could not create framebuffer texture.")
 

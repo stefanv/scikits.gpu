@@ -22,3 +22,6 @@ class TestFramebuffer(object):
         fbo = Framebuffer(32, 32)
         fbo.delete()
         assert_raises(RuntimeError, fbo.bind)
+
+    def test_non_power_of_two_texture(self):
+        fbo = Framebuffer(32, 31)

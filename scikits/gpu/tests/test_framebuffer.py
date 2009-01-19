@@ -5,13 +5,16 @@ from pyglet.gl import *
 
 class TestFramebuffer(object):
     def create(self, shape, dtype):
-        fbo = Framebuffer(shape, dtype=dtype)
+        fbo = Framebuffer()
+        fbo.add_texture(shape, dtype=dtype)
         fbo.bind()
         fbo.unbind()
-        fbo.delete()
+        del fbo
 
     def test_creation(self):
-        fbo = Framebuffer([64, 64])
+        fbo = Framebuffer()
+        fbo.add_texture([64, 64])
+
         for dtype in [gl.GL_UNSIGNED_BYTE, gl.GL_BYTE,
                       gl.GL_INT, gl.GL_UNSIGNED_INT,
                       gl.GL_FLOAT]:
@@ -19,9 +22,11 @@ class TestFramebuffer(object):
                 yield self.create, [16, 16, bands], dtype
 
     def test_bind_deleted(self):
-        fbo = Framebuffer([32, 32])
-        fbo.delete()
+        fbo = Framebuffer()
+        fbo.add_texture([32, 32])
+        fbo.__del__()
         assert_raises(RuntimeError, fbo.bind)
 
     def test_non_power_of_two_texture(self):
-        fbo = Framebuffer([32, 31])
+        fbo = Framebuffer()
+        fbo.add_texture([32, 31])

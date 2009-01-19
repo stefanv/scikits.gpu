@@ -24,7 +24,8 @@ def draw_canvas():
 
 
 # Create framebuffer object and attach texture to it
-fbo = Framebuffer(WIDTH, HEIGHT, dtype=gl.GL_FLOAT)
+fbo = Framebuffer()
+fbo.add_texture([WIDTH, HEIGHT, 3], dtype=gl.GL_FLOAT)
 gl.glPushAttrib(gl.GL_VIEWPORT_BIT)
 gl.glViewport(0, 0, WIDTH, HEIGHT)
 

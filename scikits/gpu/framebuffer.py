@@ -47,49 +47,64 @@ def _shape_to_3d(shape):
 
 class Framebuffer(object):
     require_extension('GL_EXT_framebuffer_object')
-    fbo_names = None
 
-    def __init__(self, shape, dtype=gl.GL_UNSIGNED_BYTE):
+    def __init__(self):
         """Framebuffer Object (FBO) for off-screen rendering.
 
-        A framebuffer object contains one or more framebuffer-attachable images.
-        These can be either renderbuffers or texture images.
+        A framebuffer object contains one or more
+        framebuffer-attachable images.  These can be either
+        renderbuffers or texture images.
 
-        For now the framebuffer object handles only one image, a
-        renderbuffer.
+        For now the framebuffer object handles only textures.
+
+        """
+        ## Create a framebuffer object
+        framebuffer = gl.GLuint()
+        gl.glGenFramebuffersEXT(1, ctypes.byref(framebuffer))
+        gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, framebuffer)
+
+        MAX_SLOTS = gl.GLint()
+        gl.glGetIntegerv(gl.GL_MAX_COLOR_ATTACHMENTS, ctypes.byref(MAX_SLOTS))
+
+        self.id = framebuffer
+        self.MAX_SLOTS = MAX_SLOTS
+
+        self._textures = []
+
+    def add_texture(self, shape, dtype=gl.GL_UNSIGNED_BYTE):
+        """Add texture image to the framebuffer object.
 
         Parameters
         ----------
-        width, height : int
+        shape : tuple of ints
             Dimension of framebuffer.  Note that for earlier versions
-            of OpenGL, dimensions must be a power of two.
-        bands : int
-            Number of colour bands.
+            of OpenGL, height and width dimensions must be a power of
+            two.  Valid shapes include (16,), (16, 17), (16, 16, 3).
         dtype : opengl data-type, e.g. GL_FLOAT, GL_UNSIGNED_BYTE
 
+        Returns
+        -------
+        slot : int
+            The slot number to which the texture was bound.  E.g., in the
+            case of GL_COLOR_ATTACHMENT3_EXT, returns 3.
+
         """
+        if len(self._textures) >= self.MAX_SLOTS:
+            raise RuntimeError("Maximum number of textures reached.  This "
+                               "platform supports %d attachments." % \
+                               self.MAX_SLOTS)
+
+        slot = getattr(gl, "GL_COLOR_ATTACHMENT%d_EXT" % len(self._textures))
+
         width, height, bands = _shape_to_3d(shape)
 
         if bands > 4:
             raise ValueError("Texture cannot have more than 4 colour layers.")
 
-
         colour_bands = {1: gl.GL_LUMINANCE,
                         2: gl.GL_LUMINANCE_ALPHA,
                         3: gl.GL_RGB,
                         4: gl.GL_RGBA}
-
-        ## Create a framebuffer object
-
-        # Number of framebuffer objects to allocate
-        n = 1
-
-        fbo_names = (n * gl.GLuint)()
-        gl.glGenFramebuffersEXT(1, fbo_names)
-
-        # We only work with one from here on
-        fbo = fbo_names[0]
-        gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, fbo)
 
         # allocate a texture and add to the frame buffer
         tex = Texture(width, height,
@@ -108,16 +123,15 @@ class Framebuffer(object):
         if not (status == gl.GL_FRAMEBUFFER_COMPLETE_EXT):
             raise RuntimeError("Could not set up framebuffer.")
 
-        self.texure = tex
-        self.framebuffer = fbo
-        self.framebuffer_obj_names = fbo_names
+        self._textures.append(tex)
+        return len(self._textures) - 1
 
     def bind(self):
         """Set the FBO as the active rendering buffer.
 
         """
-        if self.framebuffer_obj_names:
-            gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, self.framebuffer)
+        if self.id:
+            gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, self.id)
         else:
             raise RuntimeError("Cannot bind to deleted framebuffer.")
 
@@ -127,14 +141,11 @@ class Framebuffer(object):
         """
         gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, 0)
 
-    def delete(self):
+    def __del__(self):
         """Delete the framebuffer from the graphics card's memory.
 
         """
         self.unbind()
-        if self.framebuffer_obj_names:
-            gl.glDeleteFramebuffersEXT(1, self.framebuffer_obj_names)
-            self.framebuffer_obj_names = None
-
-    def __del__(self):
-        self.delete()
+        if self.id:
+            gl.glDeleteFramebuffersEXT(1, self.id)
+            self.id = None

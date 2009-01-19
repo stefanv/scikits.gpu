@@ -1,5 +1,6 @@
 from nose.tools import *
 
+from scikits.gpu.config import MAX_COLOR_ATTACHMENTS
 from scikits.gpu.framebuffer import *
 from pyglet.gl import *
 
@@ -30,3 +31,10 @@ class TestFramebuffer(object):
     def test_non_power_of_two_texture(self):
         fbo = Framebuffer()
         fbo.add_texture([32, 31])
+
+    def test_max_attachments(self):
+        fbo = Framebuffer()
+        for i in range(MAX_COLOR_ATTACHMENTS):
+            fbo.add_texture([16, 16])
+
+        assert_raises(RuntimeError, fbo.add_texture, [16, 16])

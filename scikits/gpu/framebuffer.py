@@ -13,7 +13,7 @@ __all__ = ['Framebuffer']
 from pyglet import gl, image
 import ctypes
 
-from scikits.gpu.config import require_extension
+from scikits.gpu.config import require_extension, MAX_COLOR_ATTACHMENTS
 from scikits.gpu.texture import Texture
 
 def _shape_to_3d(shape):
@@ -63,11 +63,8 @@ class Framebuffer(object):
         gl.glGenFramebuffersEXT(1, ctypes.byref(framebuffer))
         gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, framebuffer)
 
-        MAX_SLOTS = gl.GLint()
-        gl.glGetIntegerv(gl.GL_MAX_COLOR_ATTACHMENTS, ctypes.byref(MAX_SLOTS))
-
         self.id = framebuffer
-        self.MAX_SLOTS = MAX_SLOTS
+        self.MAX_COLOR_ATTACHMENTS = MAX_COLOR_ATTACHMENTS
 
         self._textures = []
 
@@ -89,10 +86,10 @@ class Framebuffer(object):
             case of GL_COLOR_ATTACHMENT3_EXT, returns 3.
 
         """
-        if len(self._textures) >= self.MAX_SLOTS:
+        if len(self._textures) >= MAX_COLOR_ATTACHMENTS:
             raise RuntimeError("Maximum number of textures reached.  This "
                                "platform supports %d attachments." % \
-                               self.MAX_SLOTS)
+                               MAX_COLOR_ATTACHMENTS)
 
         slot = getattr(gl, "GL_COLOR_ATTACHMENT%d_EXT" % len(self._textures))
 

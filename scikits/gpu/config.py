@@ -1,6 +1,14 @@
+__all__ = ['HardwareSupportError', 'GLSLError', 'MAX_COLOR_ATTACHMENTS',
+           'require_extension', 'hardware_info', 'texture_target']
+
 from pyglet import gl
 import pyglet.gl.gl_info as gli
-import numpy as np
+import ctypes
+
+MAX_COLOR_ATTACHMENTS = gl.GLint()
+gl.glGetIntegerv(gl.GL_MAX_COLOR_ATTACHMENTS,
+                 ctypes.byref(MAX_COLOR_ATTACHMENTS))
+MAX_COLOR_ATTACHMENTS = MAX_COLOR_ATTACHMENTS.value
 
 class HardwareSupportError(Exception):
     def __init__(self, message):

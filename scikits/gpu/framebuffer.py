@@ -16,11 +16,40 @@ import ctypes
 from scikits.gpu.config import require_extension
 from scikits.gpu.texture import Texture
 
+def _shape_to_3d(shape):
+    """Return a shape with 3-dimensions, even if lower dimensional
+    shape is provided.
+
+    >>> _shape_to_3d([5])
+    [5, 1, 1]
+
+    >>> _shape_to_3d([5, 2])
+    [5, 2, 1]
+
+    >>> _shape_to_3d([5, 3, 1])
+    [5, 3, 1]
+
+    >>> try:
+    ...     _shape_to_3d([5, 3, 3, 1])
+    ... except ValueError:
+    ...     pass
+
+    """
+    shape = list(shape)
+    L = len(shape)
+
+    if L > 3:
+        raise ValueError("Shape cannot be higher than 3-dimensional.")
+
+    shape += [1,]*(3 - L)
+
+    return shape
+
 class Framebuffer(object):
     require_extension('GL_EXT_framebuffer_object')
     fbo_names = None
 
-    def __init__(self, width, height, bands=3, dtype=gl.GL_UNSIGNED_BYTE):
+    def __init__(self, shape, dtype=gl.GL_UNSIGNED_BYTE):
         """Framebuffer Object (FBO) for off-screen rendering.
 
         A framebuffer object contains one or more framebuffer-attachable images.
@@ -39,6 +68,12 @@ class Framebuffer(object):
         dtype : opengl data-type, e.g. GL_FLOAT, GL_UNSIGNED_BYTE
 
         """
+        width, height, bands = _shape_to_3d(shape)
+
+        if bands > 4:
+            raise ValueError("Texture cannot have more than 4 colour layers.")
+
+
         colour_bands = {1: gl.GL_LUMINANCE,
                         2: gl.GL_LUMINANCE_ALPHA,
                         3: gl.GL_RGB,

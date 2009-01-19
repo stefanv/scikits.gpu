@@ -1,6 +1,6 @@
 from nose.tools import *
 
-from scikits.gpu.fbo import *
+from scikits.gpu.framebuffer import *
 from pyglet.gl import *
 
 class TestFramebuffer(object):

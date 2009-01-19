@@ -49,25 +49,8 @@ class Texture(object):
 
     '''
     tex_coords = (0., 0., 0., 1., 0., 0., 1., 1., 0., 0., 1., 0.)
-    tex_coords_order = (0, 1, 2, 3)
-    level = 0
-    images = 1
-    x = y = z = 0
 
-    def __init__(self, width, height, target, id):
-        super(Texture, self).__init__(width, height)
-        self.target = target
-        self.id = id
-        self._context = gl.current_context
-
-    def __del__(self):
-        try:
-            self._context.delete_texture(self.id)
-        except:
-            pass
-
-    @classmethod
-    def create(cls, width, height,
+    def __init__(self, width, height,
                format=GL_RGBA, dtype=GL_UNSIGNED_BYTE, internalformat=GL_RGBA):
         '''Create an empty Texture.
 
@@ -119,13 +102,20 @@ class Texture(object):
                      format, dtype,
                      blank)
 
-        texture = cls(width, height, target, id.value)
         if height != width:
-            texture._is_rectangle = True
-            texture.tex_coords = (0., 0., 0.,
+            self.tex_coords = (0., 0., 0.,
                                   width, 0., 0.,
                                   width, height, 0.,
                                   0., height, 0.)
 
         glFlush()
-        return texture
+
+        self.target = target
+        self.id = id
+        self.height, self.width = height, width
+
+    def __del__(self):
+        try:
+            self._context.delete_texture(self.id)
+        except:
+            pass

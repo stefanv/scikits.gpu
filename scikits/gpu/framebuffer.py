@@ -57,10 +57,10 @@ class Framebuffer(object):
         gl.glBindFramebufferEXT(gl.GL_FRAMEBUFFER_EXT, fbo)
 
         # allocate a texture and add to the frame buffer
-        tex = Texture.create(width, height,
-                             format=colour_bands[bands],
-                             dtype=dtype
-                             )
+        tex = Texture(width, height,
+                      format=colour_bands[bands],
+                      dtype=dtype
+                      )
 
         gl.glBindTexture(tex.target, tex.id)
         gl.glFramebufferTexture2DEXT(gl.GL_FRAMEBUFFER_EXT,

@@ -111,16 +111,16 @@ uniform mat2 mat2_in;
 uniform mat3 mat3_in;
 uniform mat4 mat4_in;
 
-uniform float float_arr[];
-uniform int int_arr[3];
+uniform float float_arr[5];
+uniform int int_arr[4];
 
-uniform vec2 vec2_arr[];
-uniform vec3 vec3_arr[];
+uniform vec2 vec2_arr[5];
+uniform vec3 vec3_arr[8];
 uniform vec4 vec4_arr[12];
 
-uniform mat2 mat2_arr[];
+uniform mat2 mat2_arr[2];
 uniform mat3 mat3_arr[12];
-uniform mat4 mat4_arr[];
+uniform mat4 mat4_arr[3];
 
 varying float x;
 

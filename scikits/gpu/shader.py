@@ -193,7 +193,7 @@ class Program(list):
             The kind of numeric type.
         shape : {2, 3, 4}
             The shape of the type, e.g., 4 for vec4, 2 for mat2, 1 for scalar.
-        is_array : bool
+        array : bool
             Whether the variable is defined as an array, e.g.,
             uniform vec4 x[]; ==> true.
 
@@ -214,6 +214,17 @@ class Program(list):
             name_array = name.split('[')
             var_name = name_array[0]
 
+            # If array size is specified, see what it is
+            if len(name_array) > 1:
+                array_size = name_array[1].split(']')[0].strip()
+                if not array_size:
+                    raise RuntimeError("Array declaration without size is not "
+                                       "supported.")
+
+                array_size = int(array_size)
+            else:
+                array_size = 1
+
             # Check if type is, e.g., vec3
             vec_param = desc[-1]
             if vec_param.isdigit():
@@ -225,7 +236,7 @@ class Program(list):
             var_info = {
                 'kind': desc,
                 'shape': shape,
-                'array': len(name_array) > 1}
+                'array': array_size}
 
             if type_info.has_key(var_name) and \
                    type_info[var_name] != var_info:
@@ -255,6 +266,35 @@ class Program(list):
         gl.glUseProgram(0)
         self.bound = False
 
+    def _uniform_loc_and_storage(self, var):
+        """Return the uniform location and a container that can
+        store its value.
+
+        Parameters
+        ----------
+        var : string
+            Uniform name.
+
+        """
+        var_info = self._uniform_type_info[var]
+
+        # If this is an array, how many values are involved?
+        count = var_info['array']
+
+        if var_info['kind'] in ['int']:
+            data_type = gl.GLint
+        else:
+            data_type = gl.GLfloat
+
+        loc = gl.glGetUniformLocation(self.handle, var)
+
+        if var_info['kind'] == 'mat':
+            storage = (data_type * (count * var_info['shape']**2))
+        else:
+            storage = (data_type * (count * var_info['shape']))
+
+        return loc, storage
+
     @if_bound
     def __setitem__(self, var, value):
         """Set uniform variable value.
@@ -268,30 +308,19 @@ class Program(list):
             raise ValueError("Uniform variable '%s' is not defined in "
                              "shader source." % var)
 
+        count, kind, shape = [var_info[k] for k in 'array', 'kind', 'shape']
+
         # Ensure the value is given as a list
         try:
             value = list(value)
         except TypeError:
             value = [value]
 
-        # If this is an array, how many values are we uploading?
-        if var_info['array']:
-            count = len(value)
-        else:
-            count = 1
-
-        if var_info['kind'] in ['int']:
-            data_type = gl.GLint
-        else:
-            data_type = gl.GLfloat
-
-        loc = gl.glGetUniformLocation(self.handle, var)
+        loc, container = self._uniform_loc_and_storage(var)
 
         if var_info['kind'] == 'mat':
-            data_array = (data_type * (count * var_info['shape']**2))(*value)
-            gl.glUniformMatrix4fv(loc, count, True, data_array)
+            gl.glUniformMatrix4fv(loc, count, True, container(*value))
         else:
-            data_array = (data_type * (count * var_info['shape']))(*value)
             if var_info['kind'] == 'int':
                 type_code = 'i'
             else:
@@ -303,7 +332,7 @@ class Program(list):
 
             set_func = getattr(gl, set_func_name)
 
-            set_func(loc, count, data_array)
+            set_func(loc, count, container(*value))
 
 def default_vertex_shader():
     """Generate a pass-through VertexShader.

@@ -36,7 +36,9 @@ __all__ = ['Program', 'VertexShader', 'FragmentShader', 'Shader',
 
 from scikits.gpu.config import GLSLError
 
-from pyglet.gl import *
+import pyglet.gl as gl
+from ctypes import pointer, POINTER, c_char_p, byref, cast, c_char, c_int, \
+                   create_string_buffer
 
 class Shader:
     def __init__(self, source="", type='vertex'):
@@ -51,52 +53,49 @@ class Shader:
             Type of shader.
 
         """
-        shader_type = {'vertex': GL_VERTEX_SHADER,
-                       'fragment': GL_FRAGMENT_SHADER,}
-##                       'geometry': GL_GEOMETRY_SHADER}
+        shader_type = {'vertex': gl.GL_VERTEX_SHADER,
+                       'fragment': gl.GL_FRAGMENT_SHADER,}
+        ##             'geometry': gl.GL_GEOMETRY_SHADER}
 
-        # create the vertex shader
-        self._createShader(source, shader_type[type])
+        if isinstance(source, basestring):
+            source = [source]
 
-    def _createShader(self, strings, type):
-        if isinstance(strings, basestring):
-            strings = [strings]
-
-        count = len(strings)
+        count = len(source)
         # if we have no source code, ignore this shader
         if count < 1:
             raise GLSLError("No GLSL source provided.")
 
         # create the shader handle
-        shader = glCreateShader(type)
+        shader = gl.glCreateShader(shader_type[type])
 
         # convert the source strings into a ctypes pointer-to-char array,
         # and upload them.  This is deep, dark, dangerous black magick -
         # don't try stuff like this at home!
-        src = (c_char_p * count)(*strings)
-        glShaderSource(shader, count,
-                       cast(pointer(src), POINTER(POINTER(c_char))),
+        src = (c_char_p * count)(*source)
+        gl.glShaderSource(shader, count,
+                          cast(pointer(src), POINTER(POINTER(c_char))),
                        None)
 
         # compile the shader
-        glCompileShader(shader)
+        gl.glCompileShader(shader)
 
         temp = c_int(0)
         # retrieve the compile status
-        glGetShaderiv(shader, GL_COMPILE_STATUS, byref(temp))
+        gl.glGetShaderiv(shader, gl.GL_COMPILE_STATUS, byref(temp))
 
         # if compilation failed, print the log
         if not temp:
             # retrieve the log length
-            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, byref(temp))
+            gl.glGetShaderiv(shader, gl.GL_INFO_LOG_LENGTH, byref(temp))
             # create a buffer for the log
             buffer = create_string_buffer(temp.value)
             # retrieve the log text
-            glGetShaderInfoLog(shader, temp, None, buffer)
+            gl.glGetShaderInfoLog(shader, temp, None, buffer)
             # print the log to the console
             raise GLSLError(buffer.value)
 
         self.handle = shader
+        self.source = "\n".join(source)
 
 class VertexShader(Shader):
     def __init__(self, source):
@@ -128,6 +127,7 @@ def if_bound(f):
 
     return execute_if_bound
 
+
 class Program(list):
     """A program contains one or more Shader.
 
@@ -139,7 +139,7 @@ class Program(list):
             # In case only one shader was provided
             list.__init__(self, [shaders])
 
-        self.handle = glCreateProgram()
+        self.handle = gl.glCreateProgram()
 
         # source is not linked yet
         self.linked = False
@@ -161,28 +161,80 @@ class Program(list):
 
     def _link(self):
         for shader in self:
-            glAttachShader(self.handle, shader.handle);
+            gl.glAttachShader(self.handle, shader.handle);
 
         # link the program
-        glLinkProgram(self.handle)
+        gl.glLinkProgram(self.handle)
 
         temp = c_int(0)
         # retrieve the link status
-        glGetProgramiv(self.handle, GL_LINK_STATUS, byref(temp))
+        gl.glGetProgramiv(self.handle, gl.GL_LINK_STATUS, byref(temp))
 
         # if linking failed, print the log
         if not temp:
             #       retrieve the log length
-            glGetProgramiv(self.handle, GL_INFO_LOG_LENGTH, byref(temp))
+            gl.glGetProgramiv(self.handle, gl.GL_INFO_LOG_LENGTH, byref(temp))
             # create a buffer for the log
             buffer = create_string_buffer(temp.value)
             # retrieve the log text
-            glGetProgramInfoLog(self.handle, temp, None, buffer)
+            gl.glGetProgramInfoLog(self.handle, temp, None, buffer)
             # print the log to the console
             raise GLSLError(buffer.value)
         else:
             # all is well, so we are linked
             self.linked = True
+
+    def _update_uniform_types(self):
+        """Determine the numeric types of uniform variables.
+
+        Updates the internal dictionary _uniform_type_info[var] with:
+
+        kind : {'mat', 'vec', 'int', 'float'}
+            The kind of numeric type.
+        shape : {2, 3, 4}
+            The shape of the type, e.g., 4 for vec4, 2 for mat2, 1 for scalar.
+        is_array : bool
+            Whether the variable is defined as an array, e.g.,
+            uniform vec4 x[]; ==> true.
+
+        """
+        source = ";".join([s.source for s in self])
+
+        # And look at each statement individually
+        source = [s.strip() for s in source.split(';')]
+
+        # Now look only at uniform declarations
+        source = [s[len('uniform')+1:] for s in source if s.startswith('uniform')]
+
+        types = [desc_name.split(' ') for desc_name in source]
+        type_info = {}
+
+        for desc, name in types:
+            # Check for vector type, e.g. float x[12]
+            name_array = name.split('[')
+            var_name = name_array[0]
+
+            # Check if type is, e.g., vec3
+            vec_param = desc[-1]
+            if vec_param.isdigit():
+                shape = int(vec_param)
+                desc = desc[:-1]
+            else:
+                shape = 1
+
+            var_info = {
+                'kind': desc,
+                'shape': shape,
+                'array': len(name_array) > 1}
+
+            if type_info.has_key(var_name) and \
+                   type_info[var_name] != var_info:
+                raise GLSLError("Inconsistent definition of variable '%s'." % \
+                                var_name)
+            else:
+                type_info[var_name] = var_info
+
+        self._uniform_type_info = type_info
 
     def bind(self):
         """Bind the program to the rendering pipeline.
@@ -192,104 +244,66 @@ class Program(list):
             self._link()
 
         # bind the program
-        glUseProgram(self.handle)
+        gl.glUseProgram(self.handle)
+        self._update_uniform_types()
         self.bound = True
 
     def unbind(self):
         """Unbind all programs in use.
 
         """
-        glUseProgram(0)
+        gl.glUseProgram(0)
         self.bound = False
 
-    # upload a floating point uniform
     @if_bound
-    def uniformf(self, name, vals):
+    def __setitem__(self, var, value):
+        """Set uniform variable value.
+
+        Please note that matrices must be specified in row-major format.
+
+        """
         try:
-            vals = list(vals)
-        except TypeError:
-            vals = [vals]
+            var_info = self._uniform_type_info[var]
+        except KeyError:
+            raise ValueError("Uniform variable '%s' is not defined in "
+                             "shader source." % var)
 
-        if not isinstance(vals[0], float):
-            raise ValueError("Uniformf can only be used to set floating "
-                             "point values.")
-
-        # check there are 1-4 values
-        if len(vals) in range(1, 5):
-            # select the correct function
-            set_func = {1 : glUniform1f,
-                        2 : glUniform2f,
-                        3 : glUniform3f,
-                        4 : glUniform4f
-                        }[len(vals)]
-            try:
-                set_func(glGetUniformLocation(self.handle, name), *vals)
-            except GLException:
-                raise ValueError("Could not set float value.  Please "
-                                 "ensure that 'uniformf' is only used "
-                                 "to set float values.")
-        else:
-            raise ValueError("Can only upload 1 to 4 floats.")
-
-    # upload an integer uniform
-    @if_bound
-    def uniformi(self, name, vals):
-        # check there are 1-4 values
+        # Ensure the value is given as a list
         try:
-            vals = list(vals)
+            value = list(value)
         except TypeError:
-            vals = [vals]
+            value = [value]
 
-        if not isinstance(vals[0], int):
-            raise ValueError("Uniformf can only be used to set integer "
-                             "values.")
-
-        if len(vals) in range(1, 5):
-            # select the correct function
-            set_func = {1 : glUniform1i,
-                        2 : glUniform2i,
-                        3 : glUniform3i,
-                        4 : glUniform4i
-                        }[len(vals)]
-
-            try:
-                set_func(glGetUniformLocation(self.handle, name), *vals)
-            except GLException:
-                raise ValueError("Could not set integer value.  Please "
-                                 "ensure that 'uniformi' is only used "
-                                 "to set integer values.")
+        # If this is an array, how many values are we uploading?
+        if var_info['array']:
+            count = len(value)
         else:
-            raise ValueError("Can only upload 1 to 4 ints.")
+            count = 1
 
-    # upload a uniform matrix
-    # works with matrices stored as lists,
-    # as well as euclid matrices
-    @if_bound
-    def uniform_matrixf(self, name, mat):
-        # obtian the uniform location
-        loc = glGetUniformLocation(self.handle, name)
-        # uplaod the 4x4 floating point matrix
-        # Matrices are entered row-wise, not column-wise as in standard OpenGL
-        glUniformMatrix4fv(loc, 1, True, (c_float * 16)(*mat))
+        if var_info['kind'] in ['int']:
+            data_type = gl.GLint
+        else:
+            data_type = gl.GLfloat
 
+        loc = gl.glGetUniformLocation(self.handle, var)
 
-    def insert(self, item):
-        raise NotImplementedError
+        if var_info['kind'] == 'mat':
+            data_array = (data_type * (count * var_info['shape']**2))(*value)
+            gl.glUniformMatrix4fv(loc, count, True, data_array)
+        else:
+            data_array = (data_type * (count * var_info['shape']))(*value)
+            if var_info['kind'] == 'int':
+                type_code = 'i'
+            else:
+                type_code = 'f'
 
-    def extend(self, item):
-        raise NotImplementedError
+            # Setter function, named something like glUniform4iv
+            set_func_name = 'glUniform%d%sv' % (var_info['shape'],
+                                                type_code)
 
-    def pop(self, item):
-        raise NotImplementedError
+            set_func = getattr(gl, set_func_name)
 
-    def remove(self, item):
-        raise NotImplementedError
-
-    def reverse(self, item):
-        raise NotImplementedError
-
-    def sort(self, item):
-        raise NotImplementedError
+            set_func(loc, count, data_array)
 
 def default_vertex_shader():
     """Generate a pass-through VertexShader.

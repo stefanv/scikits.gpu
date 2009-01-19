@@ -9,9 +9,9 @@ gl.glLoadIdentity()
 
 p = Program(mandelbrot())
 p.bind()
-p.uniformf('offset', [-1.0, 0.0])
-p.uniformf('width_ratio', 800/600.)
-p.uniformf('zoom', 2.0)
+p['offset'] = [-1.0, 0.0]
+p['width_ratio'] = 800/600.
+p['zoom'] = 2.0
 
 # Draw full-screen canvas
 gl.glBegin(gl.GL_QUADS)

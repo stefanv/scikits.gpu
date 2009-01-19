@@ -71,16 +71,16 @@ void main(void)
     p = Program(s)
     p.bind()
 
-    p.uniformf('float_in', 1.3)
-    p.uniformi('int_in', 1)
-    p.uniformf('vec_in', [1.0, 2.0, 3.0, 4.0])
-    p.uniform_matrixf('mat_in', range(16))
+    p['float_in'] = 1.3
+    p['int_in'] = 1
+    p['vec_in'] = [1.0, 2.0, 3.0, 4.0]
+    p['mat_in'] = range(16)
     p.unbind()
 
 def test_if_bound_decorator():
     s = Shader("void main(void) { gl_Position = vec4(1,1,1,1);}")
     p = Program(s)
-    assert_raises(GLSLError, p.uniformf, 'float_in', 1.3)
+    assert_raises(GLSLError, p.__setitem__, 'float_in', 1.3)
 
 def test_default_vertex_shader():
     s = default_vertex_shader()
@@ -94,6 +94,78 @@ def test_set_uniform_invalid_type():
     s = default_vertex_shader()
     p = Program(s)
     p.bind()
-    assert_raises(ValueError, p.uniformf, 'x', 1)
-    assert_raises(ValueError, p.uniformi, 'x', 1.0)
+    assert_raises(ValueError, p.__setitem__, 'x', 1)
+    assert_raises(ValueError, p.__setitem__, 'x', 1.0)
     p.unbind()
+
+def test_uniform_types():
+        s = VertexShader("""
+uniform float float_in;
+uniform int int_in;
+
+uniform vec2 vec2_in;
+uniform vec3 vec3_in;
+uniform vec4 vec4_in;
+
+uniform mat2 mat2_in;
+uniform mat3 mat3_in;
+uniform mat4 mat4_in;
+
+uniform float float_arr[];
+uniform int int_arr[3];
+
+uniform vec2 vec2_arr[];
+uniform vec3 vec3_arr[];
+uniform vec4 vec4_arr[12];
+
+uniform mat2 mat2_arr[];
+uniform mat3 mat3_arr[12];
+uniform mat4 mat4_arr[];
+
+varying float x;
+
+void main(void) { gl_Position = vec4(0, 0, 0, 0); }
+""")
+
+        p = Program(s)
+        p.bind()
+
+        def upload_val(var, val):
+            p[var] = val
+
+        for var, val in [('float_in', 1.0),
+                         ('int_in', 3),
+                         ('vec2_in', [1, 2]),
+                         ('vec3_in', [1, 2, 3]),
+                         ('vec4_in', [1, 2, 3, 4]),
+                         ('mat2_in', [float(x) for x in range(4)]),
+                         ('mat3_in', [float(x) for x in range(9)]),
+                         ('mat4_in', [float(x) for x in range(16)]),
+                         ('float_arr', [float(x) for x in range(5)]),
+                         ('int_arr', range(4)),
+                         ('vec2_arr', range(4)),
+                         ('vec3_arr', range(6)),
+                         ('vec4_arr', range(8)),
+                         ('mat2_arr', [float(x) for x in range(8)]),
+                         ('mat3_arr', [float(x) for x in range(27)]),
+                         ('mat4_arr', [float(x) for x in range(32)])]:
+            yield upload_val, var, val
+
+        assert_raises(ValueError, upload_val, x, 3.0)
+
+def test_inconsistent_definitions():
+    v = VertexShader("""
+        uniform float float_in;
+
+        void main(void) { gl_Position = vec4(0, 0, 0, 0); }
+        """)
+
+    f = FragmentShader("""
+        uniform int float_in;
+
+        void main(void) { gl_FragColor = vec4(0, 0, 0, 0); }
+        """)
+
+    p = Program([v, f])
+
+    assert_raises(GLSLError, p.bind)

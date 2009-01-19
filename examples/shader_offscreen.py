@@ -40,9 +40,9 @@ p = Program(zoo.mandelbrot())
 p.bind()
 
 # Setup the Mandelbrot fractal parameters
-p.uniformf('offset', [-1.0, 0.0])
-p.uniformf('width_ratio', float(WIDTH)/HEIGHT)
-p.uniformf('zoom', 2.0)
+p['offset'] = [-1.0, 0.0]
+p['width_ratio'] = float(WIDTH)/HEIGHT
+p['zoom'] = 2.0
 
 # Draw on the framebuffer
 draw_canvas()

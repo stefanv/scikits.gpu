@@ -7,10 +7,10 @@ from nose.tools import *
 from numpy.testing import *
 
 def test_shader_creation():
-    s = Shader("void main(void) { gl_Position = vec4(1,1,1,1); }")
+    s = VertexShader("void main(void) { gl_Position = vec4(1,1,1,1); }")
 
 def test_program_creation():
-    s = Shader("void main(void) { gl_Position = vec4(1,1,1,1); }")
+    s = VertexShader("void main(void) { gl_Position = vec4(1,1,1,1); }")
     p = Program(s)
     p.use()
     p.disable()
@@ -79,10 +79,31 @@ void main(void)
     p['mat_in'] = range(16)
     p.disable()
 
-## def test_if_bound_decorator():
-##     s = Shader("uniform float f; void main(void) { gl_Position = vec4(1,1,1,1);}")
-##     p = Program(s)
-##     assert_raises(GLSLError, p.__setitem__, 'f', 1.3)
+def test_if_in_use_decorator():
+    s = VertexShader("""
+    uniform float f;
+
+    void main(void) {
+      gl_Position = vec4(1,1,1,1);
+    }
+    """)
+    p = Program(s)
+    assert_raises(GLSLError, p.__setitem__, 'f', 1.3)
+
+def test_uniform_active():
+    s = default_vertex_shader()
+    p = Program(s)
+    assert_raises(GLSLError, p.__getitem__, 'f')
+
+def test_query_uniform_without_binding():
+    v = VertexShader("""
+    uniform float f= 1.5;
+
+    void main(void) {
+      gl_Position = vec4(f,1,1,1);
+    }""")
+    p = Program(v)
+    print p['f']
 
 def test_default_vertex_shader():
     s = default_vertex_shader()

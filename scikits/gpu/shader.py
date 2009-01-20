@@ -116,20 +116,20 @@ class FragmentShader(Shader):
 ##         Shader.__init__(self, source, type='geometry')
 
 
-def if_bound(f):
-    """Decorator: Execute this function if and only if the shader is bound.
+def if_in_use(f):
+    """Decorator: Execute this function if and only if the program is in use.
 
     """
-    def execute_if_bound(self, *args, **kwargs):
+    def execute_if_in_use(self, *args, **kwargs):
         if not self.bound:
             raise GLSLError("Shader is not bound.  Cannot execute assignment.")
 
         f(self, *args, **kwargs)
 
     for attr in ["func_name", "__name__", "__dict__", "__doc__"]:
-        setattr(execute_if_bound, attr, getattr(f, attr))
+        setattr(execute_if_in_use, attr, getattr(f, attr))
 
-    return execute_if_bound
+    return execute_if_in_use
 
 
 class Program(list):
@@ -249,7 +249,11 @@ class Program(list):
         # Now look only at uniform declarations
         source = [s[len('uniform')+1:] for s in source if s.startswith('uniform')]
 
-        types = [desc_name.split(' ') for desc_name in source]
+        types = [desc_name.split(' ')[:2] for desc_name in source]
+
+        # Handle declarations of the form uniform float f=3.0
+        types = [(desc, name.split('=')[0]) for (desc, name) in types]
+
         type_info = {}
 
         for desc, name in types:
@@ -359,7 +363,7 @@ class Program(list):
 
         return loc, storage, storage_nested, data_type
 
-    @if_bound
+    @if_in_use
     def __setitem__(self, var, value):
         """Set uniform variable value.
 

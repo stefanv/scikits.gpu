@@ -92,9 +92,7 @@ def test_program_failure():
     assert_raises(GLSLError, Program, [default_vertex_shader(),
                                        default_vertex_shader()])
 
-def test_set_uniform_invalid_type():
-    raise nose.SkipTest
-
+def test_set_uniform_invalid_shape():
     s = VertexShader("""
     uniform vec4 x;
 
@@ -106,6 +104,7 @@ def test_set_uniform_invalid_type():
     p.use()
     assert_raises(ValueError, p.__setitem__, 'x', 1)
     assert_raises(ValueError, p.__setitem__, 'x', 1.0)
+    assert_raises(ValueError, p.__setitem__, 'x', [1.0, 2.0])
     p.disable()
 
 def test_uniform_types():

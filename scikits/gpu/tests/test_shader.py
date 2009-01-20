@@ -103,7 +103,7 @@ def test_query_uniform_without_binding():
       gl_Position = vec4(f,1,1,1);
     }""")
     p = Program(v)
-    print p['f']
+    assert_equal(p['f'], 1.5)
 
 def test_default_vertex_shader():
     s = default_vertex_shader()

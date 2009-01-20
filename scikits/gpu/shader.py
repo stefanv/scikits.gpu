@@ -1,5 +1,7 @@
 """
-This module is based on code from
+Copyright (c) 2009, Stefan van der Walt <stefan@sun.ac.za>
+
+This module was originally based on code from
 
 http://swiftcoder.wordpress.com/2008/12/19/simple-glsl-wrapper-for-pyglet/
 
@@ -39,6 +41,8 @@ from scikits.gpu.config import GLSLError
 import pyglet.gl as gl
 from ctypes import pointer, POINTER, c_char_p, byref, cast, c_char, c_int, \
                    create_string_buffer
+
+import numpy as np
 
 class Shader:
     def __init__(self, source="", type='vertex'):
@@ -230,8 +234,8 @@ class Program(list):
 
         kind : {'mat', 'vec', 'int', 'float'}
             The kind of numeric type.
-        shape : {2, 3, 4}
-            The shape of the type, e.g., 4 for vec4, 2 for mat2, 1 for scalar.
+        size : {2, 3, 4}
+            The size of the type, e.g., 4 for vec4, 4 for mat2, 1 for scalar.
         array : bool
             Whether the variable is defined as an array, e.g.,
             uniform vec4 x[]; ==> true.
@@ -267,14 +271,19 @@ class Program(list):
             # Check if type is, e.g., vec3
             vec_param = desc[-1]
             if vec_param.isdigit():
-                shape = int(vec_param)
+                size = int(vec_param)
                 desc = desc[:-1]
             else:
-                shape = 1
+                size = 1
+
+            # For a square matrix, we have the side dimension.  To get
+            # the size, we need to square that.
+            if desc == 'mat':
+                size *= size
 
             var_info = {
                 'kind': desc,
-                'shape': shape,
+                'size': size,
                 'array': array_size}
 
             if type_info.has_key(var_name) and \
@@ -308,7 +317,7 @@ class Program(list):
         self.disable()
         gl.glDeleteProgram(self.handle)
 
-    def _uniform_loc_and_storage(self, var):
+    def _uniform_loc_storage_and_type(self, var):
         """Return the uniform location and a container that can
         store its value.
 
@@ -345,12 +354,10 @@ class Program(list):
             raise RuntimeError("Could not query uniform location "
                                "for '%s'." % var)
 
-        if var_info['kind'] == 'mat':
-            storage = (data_type * (count * var_info['shape']**2))
-        else:
-            storage = (data_type * (count * var_info['shape']))
+        storage = data_type * (count * var_info['size'])
+        storage_nested = count * (data_type * var_info['size'])
 
-        return loc, storage
+        return loc, storage, storage_nested, data_type
 
     @if_bound
     def __setitem__(self, var, value):
@@ -359,10 +366,11 @@ class Program(list):
         Please note that matrices must be specified in row-major format.
 
         """
-        loc, container = self._uniform_loc_and_storage(var)
+        loc, container, container_nested, dtype = \
+             self._uniform_loc_storage_and_type(var)
 
         var_info = self._uniform_type_info[var]
-        count, kind, shape = [var_info[k] for k in 'array', 'kind', 'shape']
+        count, kind, size = [var_info[k] for k in 'array', 'kind', 'size']
 
         # Ensure the value is given as a list
         try:
@@ -370,8 +378,16 @@ class Program(list):
         except TypeError:
             value = [value]
 
+        expected_size = var_info['size'] * var_info['array']
+        if len(value) != var_info['size'] * var_info['array']:
+            varname = var
+            if var_info['array'] > 0:
+                varname += '[%d]' % var_info['array']
+            raise ValueError("Invalid input size (%s) for (%s) size '%s'." \
+                             % (len(value), expected_size, varname))
+
         if var_info['kind'] == 'mat':
-            set_func_name = 'glUniformMatrix%dfv' % var_info['shape']
+            set_func_name = 'glUniformMatrix%dfv' % np.sqrt(var_info['size'])
             set_func = getattr(gl, set_func_name)
             set_func(loc, count, True, container(*value))
         else:
@@ -381,25 +397,48 @@ class Program(list):
                 type_code = 'f'
 
             # Setter function, named something like glUniform4iv
-            set_func_name = 'glUniform%d%sv' % (var_info['shape'],
+            set_func_name = 'glUniform%d%sv' % (var_info['size'],
                                                 type_code)
 
             set_func = getattr(gl, set_func_name)
             set_func(loc, count, container(*value))
 
-    @if_bound
     def __getitem__(self, var):
         """Get uniform value.
 
         """
-        loc, container = self._uniform_loc_and_storage(var)
+        loc, container, container_nested, dtype = \
+             self._uniform_loc_storage_and_type(var)
         var_info = self._uniform_type_info[var]
+        data = container_nested()
 
-        data = container()
-        if var_info['kind'] == 'int':
-            gl.glGetUniformiv(self.handle, loc, data)
+        if dtype == gl.GLint:
+            get_func = gl.glGetUniformiv
         else:
-            gl.glGetUniformfv(self.handle, loc, data)
+            get_func = gl.glGetUniformfv
+
+        alen = var_info['array']
+        for i in range(alen):
+            if i > 0:
+                # Query the location of each array element
+                loc = gl.glGetUniformLocation(self.handle, var + '[%d]' % i)
+
+            assert loc != -1
+
+            get_func(self.handle, loc, data[i])
+
+        # Convert to a NumPy array for easier processing
+        data = np.array(data)
+
+        # Scalar
+        if data.size == 1:
+            return data[0]
+        # Array, matrix, vector
+        elif var_info['kind'] == 'mat':
+            count, n_sqr = data.shape
+            n = np.sqrt(n_sqr)
+
+            data = data.reshape((count, n, n), order='F')
 
         return data
 

@@ -4,6 +4,8 @@ from scikits.gpu.config import GLSLError
 import nose
 from nose.tools import *
 
+from numpy.testing import *
+
 def test_shader_creation():
     s = Shader("void main(void) { gl_Position = vec4(1,1,1,1); }")
 
@@ -122,13 +124,13 @@ uniform mat4 mat4_in;
 uniform float float_arr[5];
 uniform int int_arr[4];
 
-uniform vec2 vec2_arr[5];
-uniform vec3 vec3_arr[8];
-uniform vec4 vec4_arr[12];
+uniform vec2 vec2_arr[2];
+uniform vec3 vec3_arr[2];
+uniform vec4 vec4_arr[2];
 
 uniform mat2 mat2_arr[2];
-uniform mat3 mat3_arr[12];
-uniform mat4 mat4_arr[3];
+uniform mat3 mat3_arr[3];
+uniform mat4 mat4_arr[2];
 
 varying float x;
 
@@ -155,7 +157,7 @@ void main(void) {
 
         def roundtrip_val(var, val):
             p[var] = val
-#            assert p[var] == val, str(p[var]) + "!=" + str(val)
+            assert_array_equal(p[var].flat, val)
 
         for var, val in [('float_in', 1.0),
                          ('int_in', 3),

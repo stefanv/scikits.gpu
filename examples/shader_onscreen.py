@@ -8,7 +8,7 @@ gl.glClear(gl.GL_COLOR_BUFFER_BIT)
 gl.glLoadIdentity()
 
 p = Program(mandelbrot())
-p.bind()
+p.use()
 p['offset'] = [-1.0, 0.0]
 p['width_ratio'] = 800/600.
 p['zoom'] = 2.0
@@ -24,6 +24,6 @@ for coords in [(-1.0, -1.0),
 gl.glEnd()
 gl.glFlush()
 
-p.unbind()
+p.disable()
 
 pyglet.app.run()

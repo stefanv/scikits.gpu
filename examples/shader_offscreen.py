@@ -37,7 +37,7 @@ gl.glLoadIdentity()
 
 # Intialise the shader program
 p = Program(zoo.mandelbrot())
-p.bind()
+p.use()
 
 # Setup the Mandelbrot fractal parameters
 p['offset'] = [-1.0, 0.0]
@@ -47,7 +47,7 @@ p['zoom'] = 2.0
 # Draw on the framebuffer
 draw_canvas()
 
-p.unbind()
+p.disable()
 
 
 # Copy the data from the graphics card to system memory

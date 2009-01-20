@@ -1,6 +1,7 @@
 from scikits.gpu.shader import *
 from scikits.gpu.config import GLSLError
 
+import nose
 from nose.tools import *
 
 def test_shader_creation():
@@ -9,8 +10,8 @@ def test_shader_creation():
 def test_program_creation():
     s = Shader("void main(void) { gl_Position = vec4(1,1,1,1); }")
     p = Program(s)
-    p.bind()
-    p.unbind()
+    p.use()
+    p.disable()
 
 def test_vertex_shader():
     s = VertexShader("void main(void) { gl_Position = vec4(1,1,1,1); }");
@@ -48,7 +49,7 @@ void main(void)
     p = Program([v, f])
 
 def test_parameters():
-    s = VertexShader("""
+    v = VertexShader("""
 uniform float float_in;
 uniform int int_in;
 uniform vec4 vec_in;
@@ -60,27 +61,26 @@ void main(void)
 {
     // Just some dummy statements used to test the passing of parameters
     // to the vertex shader
-    x = float_in;
     x = float(int_in) * 0.5;
     x = float(int_in) + vec_in.r;
+    x += mat_in[0];
 
-    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+    gl_Position = vec4(float_in, float(x), 0, 1);
 }
 """)
 
-    p = Program(s)
-    p.bind()
-
+    p = Program(v)
+    p.use()
     p['float_in'] = 1.3
     p['int_in'] = 1
     p['vec_in'] = [1.0, 2.0, 3.0, 4.0]
     p['mat_in'] = range(16)
-    p.unbind()
+    p.disable()
 
-def test_if_bound_decorator():
-    s = Shader("void main(void) { gl_Position = vec4(1,1,1,1);}")
-    p = Program(s)
-    assert_raises(GLSLError, p.__setitem__, 'float_in', 1.3)
+## def test_if_bound_decorator():
+##     s = Shader("uniform float f; void main(void) { gl_Position = vec4(1,1,1,1);}")
+##     p = Program(s)
+##     assert_raises(GLSLError, p.__setitem__, 'f', 1.3)
 
 def test_default_vertex_shader():
     s = default_vertex_shader()
@@ -91,15 +91,23 @@ def test_program_failure():
                                        default_vertex_shader()])
 
 def test_set_uniform_invalid_type():
-    s = default_vertex_shader()
+    raise nose.SkipTest
+
+    s = VertexShader("""
+    uniform vec4 x;
+
+    void main(void) {
+        gl_Position = x;
+    }""")
+
     p = Program(s)
-    p.bind()
+    p.use()
     assert_raises(ValueError, p.__setitem__, 'x', 1)
     assert_raises(ValueError, p.__setitem__, 'x', 1.0)
-    p.unbind()
+    p.disable()
 
 def test_uniform_types():
-        s = VertexShader("""
+        v = VertexShader("""
 uniform float float_in;
 uniform int int_in;
 
@@ -124,14 +132,30 @@ uniform mat4 mat4_arr[3];
 
 varying float x;
 
-void main(void) { gl_Position = vec4(0, 0, 0, 0); }
+void main(void) {
+    // Dummy statement to make sure all uniforms become active
+    x = float_in + float(int_in) + vec2_in.r + vec3_in.r + vec4_in.r +
+        mat2_in[0] + mat3_in[0] + mat4_in[0] + float_arr[0] +
+        float(int_arr[0]) + vec2_arr[0].r + vec3_arr[0].r +
+        vec4_arr[0].r + mat2_arr[0][0] + mat3_arr[0][0] +
+        mat4_arr[0][0];
+
+    gl_Position = vec4(x, 0, 0, 0);
+}
 """)
 
-        p = Program(s)
-        p.bind()
+        f = FragmentShader("""
+        void main() {
+            gl_FragColor = vec4(0, 0, 0, 0);
+        }
+        """)
 
-        def upload_val(var, val):
+        p = Program([v, f])
+        p.use()
+
+        def roundtrip_val(var, val):
             p[var] = val
+#            assert p[var] == val, str(p[var]) + "!=" + str(val)
 
         for var, val in [('float_in', 1.0),
                          ('int_in', 3),
@@ -149,9 +173,8 @@ void main(void) { gl_Position = vec4(0, 0, 0, 0); }
                          ('mat2_arr', [float(x) for x in range(8)]),
                          ('mat3_arr', [float(x) for x in range(27)]),
                          ('mat4_arr', [float(x) for x in range(32)])]:
-            yield upload_val, var, val
+            yield roundtrip_val, var, val
 
-        assert_raises(ValueError, upload_val, x, 3.0)
 
 def test_inconsistent_definitions():
     v = VertexShader("""
@@ -166,6 +189,4 @@ def test_inconsistent_definitions():
         void main(void) { gl_FragColor = vec4(0, 0, 0, 0); }
         """)
 
-    p = Program([v, f])
-
-    assert_raises(GLSLError, p.bind)
+    assert_raises(GLSLError, Program, [v, f])

@@ -141,11 +141,11 @@ class Program(list):
 
         self.handle = gl.glCreateProgram()
 
-        # source is not linked yet
-        self.linked = False
-
         # not bound yet (i.e. not in rendering pipeline)
         self.bound = False
+
+        # Variable types and descriptions
+        self._uniform_type_info = {}
 
         self._link()
 
@@ -153,11 +153,17 @@ class Program(list):
         """Append a Shader to the Program.
 
         """
-        self.linked = False
         list.append(self, shader)
 
         if self.bound:
             self.bind()
+
+    @property
+    def linked(self):
+        temp = c_int(0)
+        # retrieve the link status
+        gl.glGetProgramiv(self.handle, gl.GL_LINK_STATUS, byref(temp))
+        return bool(temp)
 
     def _link(self):
         for shader in self:
@@ -180,9 +186,42 @@ class Program(list):
             gl.glGetProgramInfoLog(self.handle, temp, None, buffer)
             # print the log to the console
             raise GLSLError(buffer.value)
-        else:
-            # all is well, so we are linked
-            self.linked = True
+
+        # Query maximum uniform name length
+        AUL = gl.GLint()
+        gl.glGetProgramiv(self.handle, gl.GL_ACTIVE_UNIFORM_MAX_LENGTH,
+                          byref(AUL))
+        self._ACTIVE_UNIFORM_MAX_LENGTH = AUL.value
+
+        self._update_uniform_types()
+
+
+    @property
+    def active_uniforms(self):
+        """Query OpenGL for a list of active uniforms.
+
+        This is needed, because we are only allowed to set and query the
+        values of active uniforms.
+
+        """
+        # Query number of active uniforms
+        nr_uniforms = gl.GLint()
+        gl.glGetProgramiv(self.handle, gl.GL_ACTIVE_UNIFORMS,
+                          byref(nr_uniforms))
+        nr_uniforms = nr_uniforms.value
+
+        length = gl.GLsizei()
+        size = gl.GLsizei()
+        enum = gl.GLenum()
+        name = create_string_buffer(self._ACTIVE_UNIFORM_MAX_LENGTH)
+
+        uniforms = []
+        for i in range(nr_uniforms):
+            gl.glGetActiveUniform(self.handle, i, 20, byref(length), byref(size),
+                                  byref(enum), name)
+            uniforms.append(name.value)
+
+        return uniforms
 
     def _update_uniform_types(self):
         """Determine the numeric types of uniform variables.
@@ -247,8 +286,8 @@ class Program(list):
 
         self._uniform_type_info = type_info
 
-    def bind(self):
-        """Bind the program to the rendering pipeline.
+    def use(self):
+        """Bind the program into the rendering pipeline.
 
         """
         if not self.linked:
@@ -256,15 +295,18 @@ class Program(list):
 
         # bind the program
         gl.glUseProgram(self.handle)
-        self._update_uniform_types()
         self.bound = True
 
-    def unbind(self):
+    def disable(self):
         """Unbind all programs in use.
 
         """
         gl.glUseProgram(0)
         self.bound = False
+
+    def __del__(self):
+        self.disable()
+        gl.glDeleteProgram(self.handle)
 
     def _uniform_loc_and_storage(self, var):
         """Return the uniform location and a container that can
@@ -276,7 +318,15 @@ class Program(list):
             Uniform name.
 
         """
-        var_info = self._uniform_type_info[var]
+        if var not in self.active_uniforms:
+            raise GLSLError("Uniform '%s' is not active.  Make sure the "
+                            "variable is used in the source code." % var)
+
+        try:
+            var_info = self._uniform_type_info[var]
+        except KeyError:
+            raise ValueError("Uniform variable '%s' is not defined in "
+                             "shader source." % var)
 
         # If this is an array, how many values are involved?
         count = var_info['array']
@@ -286,7 +336,14 @@ class Program(list):
         else:
             data_type = gl.GLfloat
 
+        assert gl.glIsProgram(self.handle) == True
+        assert self.linked
+
         loc = gl.glGetUniformLocation(self.handle, var)
+
+        if loc == -1:
+            raise RuntimeError("Could not query uniform location "
+                               "for '%s'." % var)
 
         if var_info['kind'] == 'mat':
             storage = (data_type * (count * var_info['shape']**2))
@@ -302,12 +359,9 @@ class Program(list):
         Please note that matrices must be specified in row-major format.
 
         """
-        try:
-            var_info = self._uniform_type_info[var]
-        except KeyError:
-            raise ValueError("Uniform variable '%s' is not defined in "
-                             "shader source." % var)
+        loc, container = self._uniform_loc_and_storage(var)
 
+        var_info = self._uniform_type_info[var]
         count, kind, shape = [var_info[k] for k in 'array', 'kind', 'shape']
 
         # Ensure the value is given as a list
@@ -316,10 +370,10 @@ class Program(list):
         except TypeError:
             value = [value]
 
-        loc, container = self._uniform_loc_and_storage(var)
-
         if var_info['kind'] == 'mat':
-            gl.glUniformMatrix4fv(loc, count, True, container(*value))
+            set_func_name = 'glUniformMatrix%dfv' % var_info['shape']
+            set_func = getattr(gl, set_func_name)
+            set_func(loc, count, True, container(*value))
         else:
             if var_info['kind'] == 'int':
                 type_code = 'i'
@@ -331,8 +385,23 @@ class Program(list):
                                                 type_code)
 
             set_func = getattr(gl, set_func_name)
-
             set_func(loc, count, container(*value))
+
+    @if_bound
+    def __getitem__(self, var):
+        """Get uniform value.
+
+        """
+        loc, container = self._uniform_loc_and_storage(var)
+        var_info = self._uniform_type_info[var]
+
+        data = container()
+        if var_info['kind'] == 'int':
+            gl.glGetUniformiv(self.handle, loc, data)
+        else:
+            gl.glGetUniformfv(self.handle, loc, data)
+
+        return data
 
 def default_vertex_shader():
     """Generate a pass-through VertexShader.

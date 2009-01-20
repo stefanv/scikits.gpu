@@ -18,8 +18,20 @@ class HardwareSupportError(Exception):
     def __str__(self):
         return self.message
 
+class DriverError(Exception):
+    pass
+
 class GLSLError(Exception):
     pass
+
+hardware_info = {'vendor': gli.get_vendor(),
+                 'renderer': gli.get_renderer(),
+                 'version': gli.get_version()}
+
+_opengl_version = hardware_info['version'].split(' ')[0]
+if float(_opengl_version) < 2.0:
+    raise DriverError("This package requires OpenGL v2.0 or higher. "
+                      "Your version is %s." % _opengl_version)
 
 def require_extension(ext):
     """Ensure that the given graphics extension is supported.
@@ -27,12 +39,6 @@ def require_extension(ext):
     """
     if not gl.gl_info.have_extension(ext):
         raise HardwareSupportError("the %s extension" % ext)
-
-def hardware_info():
-    info = {'vendor': gli.get_vendor(),
-            'renderer': gli.get_renderer(),
-            'version': gli.get_version()}
-    return info
 
 def texture_target(height, width):
     """Returns the hardware-specific target to render textures to.  For

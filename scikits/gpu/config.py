@@ -29,7 +29,7 @@ hardware_info = {'vendor': gli.get_vendor(),
                  'version': gli.get_version()}
 
 _opengl_version = hardware_info['version'].split(' ')[0]
-if float(_opengl_version) < 2.0:
+if _opengl_version < "2.0":
     raise DriverError("This package requires OpenGL v2.0 or higher. "
                       "Your version is %s." % _opengl_version)
 

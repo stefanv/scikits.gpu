@@ -8,8 +8,7 @@ def test_requires_ext():
     require_extension('GL_ARB_multitexture')
 
 def test_hardware_info():
-    info = hardware_info()
-    assert(isinstance(info, dict))
+    assert(isinstance(hardware_info, dict))
 
 def test_texture_target():
     assert_equal(texture_target(16, 16), gl.GL_TEXTURE_2D)

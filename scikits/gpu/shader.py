@@ -36,7 +36,7 @@ DEALINGS IN THE SOFTWARE.
 __all__ = ['Program', 'VertexShader', 'FragmentShader', 'Shader',
            'default_vertex_shader']
 
-from scikits.gpu.config import GLSLError
+from scikits.gpu.config import require_extension, GLSLError
 
 import pyglet.gl as gl
 from ctypes import pointer, POINTER, c_char_p, byref, cast, c_char, c_int, \

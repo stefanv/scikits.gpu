@@ -1,5 +1,5 @@
 __all__ = ['HardwareSupportError', 'GLSLError', 'MAX_COLOR_ATTACHMENTS',
-           'require_extension', 'hardware_info', 'texture_target']
+           'require_extension', 'hardware_info']
 
 from pyglet import gl
 import pyglet.gl.gl_info as gli
@@ -24,42 +24,28 @@ class DriverError(Exception):
 class GLSLError(Exception):
     pass
 
+def require_extension(ext):
+    """Ensure that the given graphics extension is supported.
+
+    """
+    if not gl.gl_info.have_extension('GL_' + ext):
+        raise HardwareSupportError("the %s extension" % ext)
+
 hardware_info = {'vendor': gli.get_vendor(),
                  'renderer': gli.get_renderer(),
                  'version': gli.get_version()}
+
+# Check hardware support
 
 _opengl_version = hardware_info['version'].split(' ')[0]
 if _opengl_version < "2.0":
     raise DriverError("This package requires OpenGL v2.0 or higher. "
                       "Your version is %s." % _opengl_version)
 
-def require_extension(ext):
-    """Ensure that the given graphics extension is supported.
+# This extension is required to return floats outside [0, 1]
+# in gl_FragColor
+require_extension('ARB_color_buffer_float')
 
-    """
-    if not gl.gl_info.have_extension(ext):
-        raise HardwareSupportError("the %s extension" % ext)
-
-def texture_target(height, width):
-    """Returns the hardware-specific target to render textures to.  For
-    non-power-of-two textures, an OpenGL extension is required.
-
-    Parameters
-    ----------
-    x, y : int
-        Dimensions of the texture to be rendered.
-
-    """
-    import math
-
-    def power_of_two(n):
-        f = math.log(n, 2)
-        return f == math.floor(f)
-
-    if power_of_two(height) and power_of_two(width):
-        return gl.GL_TEXTURE_2D
-    elif gli.have_extension('GL_ARB_texture_rectangle'):
-        return gl.GL_TEXTURE_RECTANGLE_ARB
-    else:
-        raise HardwareError("Hardware does not support non-power-of-two"
-                            " textures.")
+gl.glClampColorARB(gl.GL_CLAMP_VERTEX_COLOR_ARB, False)
+gl.glClampColorARB(gl.GL_CLAMP_FRAGMENT_COLOR_ARB, False)
+gl.glClampColorARB(gl.GL_CLAMP_READ_COLOR_ARB, False)

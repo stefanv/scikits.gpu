@@ -32,7 +32,7 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
 
-__all__ = ['Texture']
+__all__ = ['Texture', 'texture_target']
 
 from pyglet import gl
 from pyglet.gl import *
@@ -41,7 +41,30 @@ from pyglet.gl import *
 from pyglet.window import *
 
 from scikits.gpu.ntypes import memory_type
-from scikits.gpu.config import texture_target
+
+import math
+
+def texture_target(height, width):
+    """Returns the hardware-specific target to render textures to.  For
+    non-power-of-two textures, an OpenGL extension is required.
+
+    Parameters
+    ----------
+    x, y : int
+        Dimensions of the texture to be rendered.
+
+    """
+    def power_of_two(n):
+        f = math.log(n, 2)
+        return f == math.floor(f)
+
+    if power_of_two(height) and power_of_two(width):
+        return gl.GL_TEXTURE_2D
+    elif gl.gl_info.have_extension('GL_ARB_texture_rectangle'):
+        return gl.GL_TEXTURE_RECTANGLE_ARB
+    else:
+        raise HardwareSupportError("Hardware does not support non-power-of-two"
+                                   " textures.")
 
 class Texture(object):
     '''An image loaded into video memory that can be efficiently drawn
@@ -102,11 +125,11 @@ class Texture(object):
                      format, dtype,
                      blank)
 
-        if height != width:
-            self.tex_coords = (0., 0., 0.,
-                                  width, 0., 0.,
-                                  width, height, 0.,
-                                  0., height, 0.)
+        if texture_target != gl.GL_TEXTURE_2D:
+            self.tex_coords = (0., 0.,  0.,
+                               width, 0., 0.,
+                               width, height, 0.,
+                               height, 0., 0.)
 
         glFlush()
 

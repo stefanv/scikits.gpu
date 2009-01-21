@@ -48,7 +48,7 @@ def _shape_to_3d(shape):
     return shape
 
 class Framebuffer(object):
-    require_extension('GL_EXT_framebuffer_object')
+    require_extension('EXT_framebuffer_object')
 
     def __init__(self):
         """Framebuffer Object (FBO) for off-screen rendering.

@@ -16,6 +16,8 @@ import ctypes
 from scikits.gpu.config import require_extension, MAX_COLOR_ATTACHMENTS
 from scikits.gpu.texture import Texture
 
+import warnings
+
 def _shape_to_3d(shape):
     """Return a shape with 3-dimensions, even if lower dimensional
     shape is provided.
@@ -68,7 +70,7 @@ class Framebuffer(object):
 
         self._textures = []
 
-    def add_texture(self, shape, dtype=gl.GL_UNSIGNED_BYTE):
+    def add_texture(self, shape, dtype=gl.GL_FLOAT):
         """Add texture image to the framebuffer object.
 
         Parameters
@@ -86,6 +88,14 @@ class Framebuffer(object):
             case of GL_COLOR_ATTACHMENT3_EXT, returns 3.
 
         """
+        if dtype != gl.GL_FLOAT:
+            warnings.warn("While OpenGL < 3.0 implementations allow the "
+                          "storage of textures with data-types other "
+                          "than FLOAT, gl_FragColor only accepts "
+                          "assigned a floating point value.  In OpenGL 3.0 "
+                          "this can be changed (see READING.txt).",
+                          RuntimeWarning)
+
         if len(self._textures) >= MAX_COLOR_ATTACHMENTS:
             raise RuntimeError("Maximum number of textures reached.  This "
                                "platform supports %d attachments." % \

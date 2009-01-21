@@ -450,4 +450,10 @@ def default_vertex_shader():
     """Generate a pass-through VertexShader.
 
     """
-    return VertexShader("void main(void) { gl_Position = ftransform(); }")
+    return VertexShader("""
+           varying vec2 vertex;
+
+           void main(void) {
+               vertex.xy = gl_Vertex.xy;
+               gl_Position = ftransform();
+           }""")

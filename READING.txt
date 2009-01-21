@@ -6,3 +6,27 @@ http://www.opengl.org/documentation/specs/
 Overviews
 ---------
 http://developer.apple.com/documentation/GraphicsImaging/Conceptual/OpenGL-MacProgGuide/opengl_offscreen/chapter_5_section_5.html
+
+Future
+------
+http://opengl.org/registry/specs/EXT/gpu_shader4.txt
+
+ * New texture lookup functions are provided that allow shaders to
+   access individual texels using integer coordinates referring to the
+   texel location and level of detail. No filtering is
+   performed. These functions allow applications to use textures as
+   one-, two-, and three-dimensional arrays.
+
+ * Full signed integer and unsigned integer support in the OpenGL
+   Shading Language
+
+   - Fragment shaders can define their own output variables, and
+     declare them to be of type floating-point, integer or unsigned
+     integer. These variables are bound to a fragment color index with
+     the new API command BindFragDataLocationEXT(), and directed to
+     buffers using the existing DrawBuffer or DrawBuffers API
+     commands.
+
+Tutorials
+---------
+http://www.mathematik.uni-dortmund.de/~goeddeke/gpgpu/tutorial.html

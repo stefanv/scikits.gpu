@@ -74,7 +74,7 @@ class Texture(object):
     tex_coords = (0., 0., 0., 1., 0., 0., 1., 1., 0., 0., 1., 0.)
 
     def __init__(self, width, height,
-               format=GL_RGBA, dtype=GL_UNSIGNED_BYTE, internalformat=GL_RGBA):
+                 format=GL_RGBA, dtype=GL_FLOAT, internalformat=GL_RGBA):
         '''Create an empty Texture.
 
         Parameters
@@ -104,6 +104,7 @@ class Texture(object):
         glGenTextures(1, byref(id))
         glBindTexture(target, id.value)
         glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
 
         colour_bands = {GL_COLOR_INDEX: 1,
                         GL_DEPTH_COMPONENT: 1,

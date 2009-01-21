@@ -45,6 +45,7 @@ if _opengl_version < "2.0":
 # This extension is required to return floats outside [0, 1]
 # in gl_FragColor
 require_extension('ARB_color_buffer_float')
+require_extension('ARB_texture_float')
 
 gl.glClampColorARB(gl.GL_CLAMP_VERTEX_COLOR_ARB, False)
 gl.glClampColorARB(gl.GL_CLAMP_FRAGMENT_COLOR_ARB, False)

@@ -116,7 +116,8 @@ class Framebuffer(object):
         # allocate a texture and add to the frame buffer
         tex = Texture(width, height,
                       format=colour_bands[bands],
-                      dtype=dtype
+                      dtype=dtype,
+                      internalformat=gl.GL_RGB32F_ARB,
                       )
 
         gl.glBindTexture(tex.target, tex.id)

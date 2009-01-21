@@ -4,10 +4,16 @@ from scikits.gpu.config import MAX_COLOR_ATTACHMENTS
 from scikits.gpu.framebuffer import *
 from pyglet.gl import *
 
+import warnings
+
 class TestFramebuffer(object):
     def create(self, shape, dtype):
         fbo = Framebuffer()
+
+        warnings.filterwarnings('ignore')
         fbo.add_texture(shape, dtype=dtype)
+        warnings.filterwarnings('once')
+
         fbo.bind()
         fbo.unbind()
         del fbo
